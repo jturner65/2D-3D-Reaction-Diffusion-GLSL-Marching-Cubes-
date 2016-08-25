@@ -9,8 +9,7 @@ public class myGUIObj {
 	public myVector start, end;				//x,y coords of start corner, end corner (z==0) for clickable region
 	public String name, dispText;
 
-	public double val;
-	public final double minVal, maxVal;
+	public double val, minVal, maxVal;
 	public boolean treatAsInt;
 	public int _cVal;
 	public double modMult;						//multiplier for mod value
@@ -36,9 +35,11 @@ public class myGUIObj {
 	
 	public void setKFIdx(int _idx){kfIdx = _idx; val = p.curKFVals[kfIdx];}	
 	public double getVal(){return (kfIdx == -1) ? val : p.curKFVals[kfIdx];}	
+	public void setNewMax(double _newval){	maxVal = _newval;val = ((val >= minVal)&&(val<=maxVal)) ? val : (val < minVal) ? minVal : maxVal;		}
+	public void setNewMin(double _newval){	minVal = _newval;val = ((val >= minVal)&&(val<=maxVal)) ? val : (val < minVal) ? minVal : maxVal;		}
 	
 	public double setVal(double _newVal){
-		val = ((_newVal > minVal)&&(_newVal<maxVal)) ? _newVal : (_newVal < minVal) ? minVal : maxVal;		
+		val = ((_newVal >= minVal)&&(_newVal<=maxVal)) ? _newVal : (_newVal < minVal) ? minVal : maxVal;		
 		return val;
 	}	
 	
