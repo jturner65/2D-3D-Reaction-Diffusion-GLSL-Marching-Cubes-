@@ -5,6 +5,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public class myMCCalcThreads implements Callable<Boolean> {
 
@@ -55,17 +56,6 @@ public class myMCCalcThreads implements Callable<Boolean> {
 			}
 		}		
 	}
-//	
-//	public void updateGrid(int[] _data){
-//		intData=_data;
-//	}
-
-	/*
-	 * Given a grid cell and an isolevel, calculate the facets required to represent the isosurface through the cell. Return the number
-	 * of triangular facets, the lclTris ara will have the verts of =< 5 triangular facets. 0 will be returned if the grid cell
-	 * is either totally above of totally below the isolevel.
-	 * modIsoLvl is iso level made into bit mask
-	 */
 	
 	public void toTriangle(myMCCube grid, int gridI, int gridJ, int modIsoLvl) {
 		int cubeIDX = 0;		
@@ -95,6 +85,65 @@ public class myMCCalcThreads implements Callable<Boolean> {
 		}     
 	}//toTriangle
 
+	public void buildTrisVertShade(){		
+		//instead of modifying each data value by shifting, masking and division, can we multiply and shift the iso level - 1 time mult + shift instead of many shift/divs
+		int idx = stIdx;
+		int modIsoLvl = (int)(isolevel*256.0f)<<disp;
+		int mask = 0xFF << disp;			//mask is necessary, both u and v results returned simultaneously
+		for(int j = 0; j < endJ; ++j){
+			for (int i = 0; i < endI; ++i) {
+				for (int id=0; id<8;++id) {			//each of 8 verts on grid
+					//grid[idx].val[id]= ((intData[grid[idx].dataPIdx[id]] >> disp & 0xFF));///256.0f);
+					grid[idx].val[id]= (MC.intData[grid[idx].dataPIdx[id]] & mask);
+				}
+				toTriangleVertShade(grid[idx], i, j, modIsoLvl);
+				++idx;
+			}
+		}		
+	}
+	/*
+	 * Given a grid cell and an isolevel, calculate the facets required to represent the isosurface through the cell. Return the number
+	 * of triangular facets, the lclTris ara will have the verts of =< 5 triangular facets. 0 will be returned if the grid cell
+	 * is either totally above of totally below the isolevel.
+	 * modIsoLvl is iso level made into bit mask
+	 */
+	public void toTriangleVertShade(myMCCube grid, int gridI, int gridJ, int modIsoLvl) {
+		int cubeIDX = 0;		
+		myPointf vertList[] = new myPointf[12];//only possible 0-11 idxs in vert list
+		
+		//Determine the index into the edge table which tells us which vertices are inside of the surface
+		for(int i =0; i<grid.val.length;++i){if(grid.val[i] < modIsoLvl){	cubeIDX |= pow2[i];}}		
+
+		// Cube is entirely in/out of the surface
+		if (edgeTable[cubeIDX] == 0) {	return ;}
+		// Find the vertices where the surface intersects the cube
+		int idx0, idx1;
+		for(int i =0; i<vIdx.length;++i){
+			if ((edgeTable[cubeIDX] & pow2[i]) != 0){
+				idx0 = vIdx[i][0];	idx1 = vIdx[i][1];
+				vertList[i] = VertexInterp(grid.p[idx0], grid.p[idx1], grid.val[idx0], grid.val[idx1], modIsoLvl);
+				MC.synchSetVertList(grid.vIdx[i], vertList[i]);
+
+			}}
+		// Create the triangle
+		int araIDX = cubeIDX << 4, araIDXpI, tIDX0, tIDX1, tIDX2, gtIDX0, gtIDX1, gtIDX2;
+		//myVectorf _loc = new myVectorf(gridI,  gridJ,  gridK);
+		myMCTri tmpTri;
+		for (int i = 0; triAra[araIDX + i] != -1; i += 3) {	
+			araIDXpI = araIDX + i;
+			tIDX0 = triAra[araIDXpI];
+			tIDX1 = triAra[araIDXpI + 1];
+			tIDX2 = triAra[araIDXpI + 2];
+			gtIDX0 = grid.vIdx[tIDX0];
+			gtIDX1 = grid.vIdx[tIDX1];
+			gtIDX2 = grid.vIdx[tIDX2];
+			
+			tmpTri = new myMCTri(new myPointf[]{ vertList[tIDX0], vertList[tIDX1],	vertList[tIDX2]},
+					new myMCVert[]{MC.usedVertList.get(gtIDX0),MC.usedVertList.get(gtIDX1),MC.usedVertList.get(gtIDX2) });
+			triList.add(tmpTri); 
+		}     
+	}//toTriangleVertShade
+
 	/* 
 	 * Linearly interpolate the position where an isosurface cuts an edge between two vertices, each with their own scalar value.
 	 * Bounds check isolevel
@@ -106,7 +155,12 @@ public class myMCCalcThreads implements Callable<Boolean> {
 	@Override
 	public Boolean call() throws Exception {
 		triList.clear();
-		buildTris();
+		if(MC.p.flags[MC.p.useVertNorms]){
+			buildTrisVertShade();
+		}
+		else {
+			buildTris();
+		}
 		synchronized (MC.triList) {
 			MC.triList.addAll(triList);
 		}		
@@ -208,3 +262,21 @@ public class myMCCalcThreads implements Callable<Boolean> {
 }//class def
 	
 
+class buildMCData implements Runnable{
+	public myMarchingCubes MC;
+	public int numVerts;
+	public buildMCData(myMarchingCubes _mc, int _numVerts){
+		MC = _mc;
+		numVerts = _numVerts;
+		MC.vertList = new ConcurrentSkipListMap<Integer, myMCVert> ();
+		MC.usedVertList = new ConcurrentSkipListMap<Integer, myMCVert> ();
+	}
+	@Override
+	public void run() {
+		for(int idx = 0; idx < numVerts; ++idx){
+			MC.vertList.put(idx, new myMCVert());
+		}
+		
+	}
+	
+}//buildMCData

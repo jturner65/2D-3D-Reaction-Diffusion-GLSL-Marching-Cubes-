@@ -46,6 +46,7 @@ public class cs7492Proj3 extends PApplet {
 	
 	public myRDSolver RD;
 	public ExecutorService th_exec;
+	public int numThreadsAvail;
 	
 	public void settings(){
 		size((int)(displayWidth*.95f), (int)(displayHeight*.9f),P3D);
@@ -121,6 +122,12 @@ public class cs7492Proj3 extends PApplet {
 	//called once at start of program
 	public void initOnce(){
 		initVisOnce();						//always first		
+		//thread executor for multithreading
+		numThreadsAvail = Runtime.getRuntime().availableProcessors();
+		pr("# threads : "+ numThreadsAvail);
+		th_exec = Executors.newFixedThreadPool(numThreadsAvail);
+		//th_exec = Executors.newCachedThreadPool();
+		
 		RD = new myRDSolver(this, grid2D_X, grid2D_Y);
 		
 		kfValStr = new String[kfVals.length*2][kfVals[0].length+1];
@@ -136,9 +143,7 @@ public class cs7492Proj3 extends PApplet {
 			kfValStr[(i*2)+1 ] = tmp;
 		}
 	
-		//thread executor for multithreading
-		th_exec = Executors.newCachedThreadPool();
-		
+
 		this.setSolverType(0);						//starts with fwd euler : //solver type used for 2d solver = 0 == fwd euler, 1 == pure imp, 2 == ADI
 		currDispType=0;						//start with spots
 		curKFVals[0] = kfVals[currDispType][solverType][0];
@@ -219,7 +224,9 @@ public class cs7492Proj3 extends PApplet {
 					setSolverType(slv2DShdr);
 				} else {setSolverType(slvFE);}
 				initProgram();	
-				break;}		//anything special for shader 2d 			
+				break;}		//anything special for shader 2d 
+			case useVertNorms		: {//use vertex normals for shading
+				break;}
 		}
 	}//setFlags  
 			
@@ -435,9 +442,10 @@ public class cs7492Proj3 extends PApplet {
 	public final int pureImplicit 		= 11;			// whether this simulation should use purely implicit diffusion	
 	public final int dispChemU			= 12;			//display concentrations for chemical U
 	public final int useShader2D		= 13;			//use the shader-based 2D fwd euler solver
-	public final int show3D			= 14;
+	public final int show3D				= 14; 			
+	public final int useVertNorms		= 15;			//use vertex normals for shading marching cubes
 
-	public final int numFlags = 15;
+	public final int numFlags = 16;
 	
 	public boolean showInfo;										//whether or not to show start up instructions for code
 	
@@ -461,7 +469,8 @@ public class cs7492Proj3 extends PApplet {
 			"Use Pure Implicit", 
 			"Display U chem conc",
 			"Use 2D Shader Fwd Eul",
-			"Change back to 2D"//"3D solver disabled"
+			"Change back to 2D",//"3D solver disabled"
+			"Use MC Vertex Normals"
 			};
 	
 	public final String[] falseFlagNames = {
@@ -479,14 +488,15 @@ public class cs7492Proj3 extends PApplet {
 			"Use Pure Implicit", 
 			"Display V chem conc",
 			"Use 2D Shader Fwd Eul",
-			"Change to 3D Marching Cubes"//"3D solver disabled"
+			"Change to 3D Marching Cubes",
+			"Use MC Face Normals"
 			};
 	
 	public int[][] flagColors;
 	//List<String> places = Arrays.asList
 	//flags that can be modified by clicking on screen
 	public List<Integer> clkyFlgs = Arrays.asList(
-			debugMode, saveAnim,runSim,useOnlyDiff,useSpatialParams,useCustomStencil,useADI,useNeumann,pureImplicit,dispChemU,useShader2D,show3D
+			debugMode, saveAnim,runSim,useOnlyDiff,useSpatialParams,useCustomStencil,useADI,useNeumann,pureImplicit,dispChemU,useShader2D,show3D,useVertNorms
 			);			
 	float xOff = 20 , yOff = 20;			//offset values to render boolean menu on side of screen	
 	public final float minClkX = 17;
@@ -952,6 +962,8 @@ public class cs7492Proj3 extends PApplet {
 		return new myPoint(G, Math.pow(s,t), R(A,t*a,mI,mJ,G));
 	  }
 	
+//	//s-cut to print to console
+	public void pr(String str){outStr2Scr(str);}
 
 	public double spiralAngle(myPoint A, myPoint B, myPoint C, myPoint D) {return myVector._angleBetween(new myVector(A,B),new myVector(C,D));}
 	public double spiralScale(myPoint A, myPoint B, myPoint C, myPoint D) {return myPoint._dist(C,D)/ myPoint._dist(A,B);}

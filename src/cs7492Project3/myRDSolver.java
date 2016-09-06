@@ -87,7 +87,8 @@ public class myRDSolver {
 		//shader stuff
 		initShaders(true);
 		int pCnt = 1;
-		MC = new myMarchingCubes(p, cell3dSize);			
+		MC = new myMarchingCubes(p, cell3dSize);	
+		p.th_exec.execute(new buildMCData(MC, MC.vgx * MC.vgy * MC.vgz));	
 		glslSolver = new my3DGLSLSolver(p, this, MC, cell3dSize);
 		glslSolver.setRDSimVals(ru, rv, k, f);			
 		//2d stuff below		

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.Future;
 
-
 import processing.core.*;
 import processing.opengl.*;
 
@@ -21,7 +20,9 @@ public class myMarchingCubes {
 	public PGL pgl;
 	public PShader sh;
 
-	public int gx, gy, gz, numCubes, gxgy;
+	public int gx, gy, gz, 
+		vgx, vgy, vgz,
+		numCubes, gxgy, vgxgy;
 	
 	public FloatBuffer dataBuf;
 
@@ -29,21 +30,17 @@ public class myMarchingCubes {
 	
 	public List<myMCTri> triList = Collections.synchronizedList(new ArrayList<myMCTri>());
 
-	
-	//public ArrayList<myMCTri> triList;
 	private myMCCube[] grid;				//3d grid holding marching cubes
 	
 	public List<Future<Boolean>> callMCCalcFutures;
 	public List<myMCCalcThreads> callMCCalcs;
 //	//structure to hold mid-edge vertices
-//	public ConcurrentSkipListMap<Integer, myMCVert> vertList, usedVertList;
+	public ConcurrentSkipListMap<Integer, myMCVert> vertList, usedVertList;
 
 	// draw data
 	public myVector dataStep;
 	public ByteBuffer buf;
-	//public static final int[] pow2 = new int[]{1,2,4,8,16,32,64,128,256,512,1024,2048,4096, 8192, 16384, 32768 };
 	public int cellSize;			//how big are the cells in the resultant grid
-	//public int[][] vIdx = new int[][]{{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
 	//holding ara
 	public int[] intData;
 	
@@ -65,17 +62,18 @@ public class myMarchingCubes {
 	public void setDimAndRes(float sx, float sy, float sz,int x, int y, int z) {
 		gx = x;	gy = y;	gz = z;
 		gxgy = x * y;
+		vgx = (x*2)-1;
+		vgy = (y*2)-1;
+		vgz = (z*2)-1;
 		numCubes = x * y * z;
 
 		triList = new ArrayList<myMCTri>();		
 		dataStep = new myVector(cellSize, cellSize, cellSize);
 		myMCCube.gx = gx;
 		myMCCube.gxgy = gxgy;
-		myMCCube.tgx = 2*gx;
-		myMCCube.fgxgy = 4*gxgy;
 		grid = new myMCCube[numCubes];			//is a global grid faster?
 		intData = new int[numCubes];
-		
+				
 		for (int k = 0; k < gz - 1; ++k) {
 			int stIdx = IX(0,0,k), endIdx = IX(-gxgy,0,k+1),idx = IX(0,0,k);	
 			for (int j = 0; j < gy - 1; ++j) {		
@@ -88,17 +86,17 @@ public class myMarchingCubes {
 		}
 	}
 	
-//	public void setVertListUsed(int idx, myVectorf _norm){
-//		synchronized(this){
-//			myMCVert tmp = vertList.get(idx);
-//			tmp.setVert(_norm);
-//			usedVertList.put(idx, tmp);
-//		}
-//	}
+	public void synchSetVertList(int idx, myPointf _loc){
+		synchronized(usedVertList){
+			myMCVert tmp = vertList.get(idx);
+			tmp.setInitVert(_loc);
+			usedVertList.put(idx, tmp);
+		}
+	}
+	
 	
 	//idxing into 3d grid should be for z -> for y -> for x (inner)
 	public int IX(int x, int y, int z){return (x + (y * gy) + (z * gxgy));}
-	public int IXVert(int x, int y, int z){return (x + (y * 2* gy) + (z * 2 * gxgy));}
 	public void copyColorAraToData(int[] clrPxl){
 		int idx = 0, j_kgxgy;
 		isolevel =  p.flags[p.dispChemU] ?  p.guiObjs[p.gIDX_isoLvl].valAsFloat() : 1.0f - p.guiObjs[p.gIDX_isoLvl].valAsFloat();
@@ -108,29 +106,43 @@ public class myMarchingCubes {
 			j_kgxgy+=gx;
 		}}}			
 
-		int callIdx = 0;
+		//int callIdx = 0;
 		myMCCalcThreads.isolevel = isolevel;
-
+//		for(myMCVert v : usedVertList.values()){v.clearVert();}
+//		usedVertList.clear();
 		try {callMCCalcFutures = p.th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
 	}
 	
 	
 	public Iterator<myMCTri> i;
-	//public myMCTri t;
-	public void draw() {
-		p.setColorValFill(p.triColors[p.RD.dispChem][p.currDispType]);	
-		p.noStroke();
-        
-		p.beginShape(p.TRIANGLES);
-		
+	private void drawVNorms(){
+		p.beginShape(p.TRIANGLES);		
 		synchronized(triList) {
 			i = triList.iterator(); // Must be in synchronized block		    
 		    while (i.hasNext()){
-		    	i.next().drawMe(p);
+		    	i.next().drawMeVerts(p);
 		    }
 		  }
 		p.endShape();	
-		triList = new ArrayList<myMCTri>();	
+		triList = new ArrayList<myMCTri>();
+	}
+	public void draw() {
+		p.setColorValFill(p.triColors[p.RD.dispChem][p.currDispType]);	
+		p.noStroke();
+        if (p.flags[p.useVertNorms]){
+        	 drawVNorms();
+        } else {
+			p.beginShape(p.TRIANGLES);
+			
+			synchronized(triList) {
+				i = triList.iterator(); // Must be in synchronized block		    
+			    while (i.hasNext()){
+			    	i.next().drawMe(p);
+			    }
+			  }
+			p.endShape();	
+			triList = new ArrayList<myMCTri>();
+        }
 	}
 
 	public String toString() {
@@ -232,10 +244,7 @@ public class myMarchingCubes {
 class myMCCube {
 	public int idx;
 //	private int cubeIDX, ETcubeIDX, araCBIdx;
-	public static int gx = 0, //gy = 0, gz = 0, 
-			gxgy = 0,
-			tgx = 0, //tgy = 0, tgz = 0, 
-			fgxgy = 0;
+	public static int gx = 0,gxgy = 0;
 	public myVectorf[] p =new myVectorf[8];
 	public int[] dataPIdx = new int[8];		//idx in data corresponding to each point in cube
 	public float[] val = new float[8];
@@ -346,7 +355,8 @@ class myMCTri {
 	//draw via verts with per-vertex normals
 	public void drawMeVerts(cs7492Proj3 pa){
 		for(int i =0; i<3; ++i){
-			verts[i].drawMe(pa);
+			pa.gl_normal(verts[i].n); 
+			pa.gl_vertex(verts[i].loc);
 		}		
 	}
 }//myMCTri
@@ -355,15 +365,14 @@ class myMCTri {
 class myMCVert{
 	public int numTris = 0;
 	public myPointf loc = new myPointf();
-	public myVectorf rawN = new myVectorf();			//raw unit normal == actual normal * # tris sharing this vertex
-	public myVectorf n = new myVectorf();
+	public myVectorf n = new myVectorf();			//raw unit normal == actual normal * # tris sharing this vertex
 	public myMCVert(){
-		clearVert();
+	//	clearVert();
 	}
 	public void clearVert(){
 		numTris = 0;
 		loc.set(0,0,0);
-		rawN.set(0,0,0);
+		n.set(0,0,0);
 	}
 	
 	public void setInitVert(myPointf _loc){
@@ -373,15 +382,18 @@ class myMCVert{
 	//set the location of this vert, and the initial normal and # tris
 	public void setVert(myVectorf _norm){
 		numTris++;				//increment # of triangles sharing this vertex
-		rawN._add(_norm);
-		n.set(myVectorf._div(rawN, numTris));		//keep rawN around so we don't have to re-calculate normal all the time			
+		if(numTris == 1){
+			n.set(_norm);
+		} else {			
+			n._add(_norm);
+		}
 	}
 
 	//draw per vert normal
-	public void drawMe(cs7492Proj3 pa){
-		pa.gl_normal(n);                                         // changes normal for smooth shading		
-		pa.gl_vertex(loc);
-	}
+//	public void drawMe(cs7492Proj3 pa){
+//		pa.gl_normal(n);                                         // changes normal for smooth shading		
+//		pa.gl_vertex(loc);
+//	}
 		
 }//
 
