@@ -9,7 +9,7 @@ public class my3DGLSLSolver {
 	public cs7492Proj3 p;
 	public myRDSolver rd;
 	
-	public PImage resImageU, resImageV, redMask, greenMask;//, resDataImage              
+	//public PImage resImageU, resImageV, redMask, greenMask;//, resDataImage              
 	public PGraphics shdrBuf3D;//, shdrBufMC; 			// Image drawn onto by & re-fed to the shader every loop
 	public PShader RD3Dshader, MCShader;
 	// Set the speed of the reaction (number of loops for each frame)
@@ -61,28 +61,14 @@ public class my3DGLSLSolver {
 		return false;
 	}
 	public void init3DShader(PGraphics _buf, int w,int h){
-//		float[] randVal = new float[seedNum];
-//		for (int i = 0; i < seedNum; ++i) {randVal[i] = p.random(gridX);}
-		redMask= new PImage(w, h);
-		greenMask= new PImage(w, h);
-        resImageU = new PImage(w, h);
-		resImageV = new PImage(w, h);
-       // resDataImage = new PImage(w, h);		
         _buf.beginDraw();
         _buf.loadPixels();
-        redMask.loadPixels();
-        greenMask.loadPixels();
         int idx = 0;
         for(int x = 0; x<w; ++x){
             for(int y = 0; y<h; ++y){ 
-            	//masks used to quickly clear "colors" not being used, either red (u chem) or green (v chem)
-               	redMask.pixels[idx] = p.color(255,0,0,255);
-               	greenMask.pixels[idx] = p.color(0,255,0,255);
                	_buf.pixels[idx++] = 0;//(checkRandAssign(x/cellSize, y/cellSize, randVal)) ? 0x00FF00FF : 0xFF0000FF;
             }      
         }
-        redMask.updatePixels();
-        greenMask.updatePixels();
         _buf.updatePixels();
         _buf.endDraw();				
 	}
@@ -146,22 +132,8 @@ public class my3DGLSLSolver {
 	
 
 	public void drawShaderRes(){		  
-		  // Map final image to screen size for display
-        if(p.flags[p.dispChemU]){
-			resImageU.copy( shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D, 0, 0,  gridPxlW3D, gridPxlH3D);
-			resImageU.blend(greenMask, 0, 0, gridPxlW3D, gridPxlH3D, 0, 0,  gridPxlW3D, gridPxlH3D, p.EXCLUSION );
-			resImageU.filter(p.GRAY);
-			//p.image( resImageU, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result           
-
-			MC.copyColorAraToData(resImageU.pixels);
-
-		} else {
-			resImageV.copy(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D, 0, 0,  gridPxlW3D, gridPxlH3D );
-			resImageV.blend(redMask, 0, 0, gridPxlW3D, gridPxlH3D, 0, 0,  gridPxlW3D, gridPxlH3D, p.EXCLUSION);
-			resImageV.filter(p.GRAY);
-		    MC.copyColorAraToData(resImageV.pixels);
-			//p.image( resImageV, 0, 0, gridPxlW3D, gridPxlH3D );	// Display result
-		}
+       	shdrBuf3D.loadPixels();
+       	MC.copyColorAraToData(shdrBuf3D.pixels);
 	}
 	
 	public void draw() {		

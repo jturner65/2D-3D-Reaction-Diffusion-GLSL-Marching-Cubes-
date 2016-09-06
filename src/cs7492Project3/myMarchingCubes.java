@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.*;
 import java.util.concurrent.Future;
 
 
@@ -16,12 +17,6 @@ public class myMarchingCubes {
 
 	// obj data
 	public float isolevel;
-	public double isoDel = 0.00001;		//1-time init
-	
-	//PImage resCubeIdxImg;
-	
-	//public int szTriVertVals = 4000000, numTriVertVals = 0;
-	public float[] triVerts;						//send these bums directly to a shader?  maybe
 
 	public PGL pgl;
 	public PShader sh;
@@ -32,7 +27,6 @@ public class myMarchingCubes {
 
 	public float minVal, maxVal;
 	
-	//public List<myMCTri> triList = Collections.synchronizedList(new ArrayList<myMCTri>());
 	public List<myMCTri> triList = Collections.synchronizedList(new ArrayList<myMCTri>());
 
 	
@@ -41,14 +35,15 @@ public class myMarchingCubes {
 	
 	public List<Future<Boolean>> callMCCalcFutures;
 	public List<myMCCalcThreads> callMCCalcs;
-
+//	//structure to hold mid-edge vertices
+//	public ConcurrentSkipListMap<Integer, myMCVert> vertList, usedVertList;
 
 	// draw data
 	public myVector dataStep;
 	public ByteBuffer buf;
-	public static final int[] pow2 = new int[]{1,2,4,8,16,32,64,128,256,512,1024,2048,4096, 8192, 16384, 32768 };
+	//public static final int[] pow2 = new int[]{1,2,4,8,16,32,64,128,256,512,1024,2048,4096, 8192, 16384, 32768 };
 	public int cellSize;			//how big are the cells in the resultant grid
-	public int[][] vIdx = new int[][]{{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
+	//public int[][] vIdx = new int[][]{{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
 	//holding ara
 	public int[] intData;
 	
@@ -75,16 +70,15 @@ public class myMarchingCubes {
 		triList = new ArrayList<myMCTri>();		
 		dataStep = new myVector(cellSize, cellSize, cellSize);
 		myMCCube.gx = gx;
-		myMCCube.gy = gy;
-		myMCCube.gz = gz;
 		myMCCube.gxgy = gxgy;
-		//int stOffset, endOffset;
+		myMCCube.tgx = 2*gx;
+		myMCCube.fgxgy = 4*gxgy;
 		grid = new myMCCube[numCubes];			//is a global grid faster?
 		intData = new int[numCubes];
+		
 		for (int k = 0; k < gz - 1; ++k) {
 			int stIdx = IX(0,0,k), endIdx = IX(-gxgy,0,k+1),idx = IX(0,0,k);	
-			for (int j = 0; j < gy - 1; ++j) {
-				//stOffset =  IX(0,j,k);				
+			for (int j = 0; j < gy - 1; ++j) {		
 				for (int i = 0; i < gx - 1; ++i) {									
 					grid[idx] = new myMCCube(i, j, k,  idx, dataStep);					
 					idx++;
@@ -93,8 +87,18 @@ public class myMarchingCubes {
 			callMCCalcs.add(new myMCCalcThreads(this, grid, stIdx, endIdx, isolevel, k, gx - 1, gy - 1));	//process 2d grid for each thread
 		}
 	}
+	
+//	public void setVertListUsed(int idx, myVectorf _norm){
+//		synchronized(this){
+//			myMCVert tmp = vertList.get(idx);
+//			tmp.setVert(_norm);
+//			usedVertList.put(idx, tmp);
+//		}
+//	}
+	
 	//idxing into 3d grid should be for z -> for y -> for x (inner)
 	public int IX(int x, int y, int z){return (x + (y * gy) + (z * gxgy));}
+	public int IXVert(int x, int y, int z){return (x + (y * 2* gy) + (z * 2 * gxgy));}
 	public void copyColorAraToData(int[] clrPxl){
 		int idx = 0, j_kgxgy;
 		isolevel =  p.flags[p.dispChemU] ?  p.guiObjs[p.gIDX_isoLvl].valAsFloat() : 1.0f - p.guiObjs[p.gIDX_isoLvl].valAsFloat();
@@ -107,15 +111,12 @@ public class myMarchingCubes {
 		int callIdx = 0;
 		myMCCalcThreads.isolevel = isolevel;
 
-		for (int k = 0; k < gz - 1; ++k) {
-			callMCCalcs.get(callIdx++).updateGrid(intData);		//each thread processes a slice of the result
-		}
 		try {callMCCalcFutures = p.th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
 	}
 	
 	
 	public Iterator<myMCTri> i;
-	public myMCTri t;
+	//public myMCTri t;
 	public void draw() {
 		p.setColorValFill(p.triColors[p.RD.dispChem][p.currDispType]);	
 		p.noStroke();
@@ -123,57 +124,14 @@ public class myMarchingCubes {
 		p.beginShape(p.TRIANGLES);
 		
 		synchronized(triList) {
-			i = triList.iterator(); // Must be in synchronized block
-		    
+			i = triList.iterator(); // Must be in synchronized block		    
 		    while (i.hasNext()){
-		    	t = i.next();
-				p.gl_normal(t.n);
-				p.gl_vertex(t.p[0]);
-				p.gl_vertex(t.p[1]);
-				p.gl_vertex(t.p[2]);
+		    	i.next().drawMe(p);
 		    }
 		  }
 		p.endShape();	
 		triList = new ArrayList<myMCTri>();	
 	}
-	/*
-	 * Given a grid cell and an isolevel, calculate the facets required to represent the isosurface through the cell. Return the number
-	 * of triangular facets, the lclTris ara will have the verts of =< 5 triangular facets. 0 will be returned if the grid cell
-	 * is either totally above of totally below the isolevel.
-	 */
-//	public void toTriangle(myMCCube grid, int gridI, int gridJ, int gridK) {
-//		int cubeIDX = 0;		
-//		myPoint vertList[] = new myPoint[12];
-//		
-//		//Determine the index into the edge table which tells us which vertices are inside of the surface
-//		for(int i =0; i<grid.val.length;++i){if(grid.val[i] < isolevel){	cubeIDX |= pow2[i];}}		
-//
-//		// Cube is entirely in/out of the surface
-//		if (edgeTable[cubeIDX] == 0) {	return ;}
-//		// Find the vertices where the surface intersects the cube
-//		for(int i =0; i<vIdx.length;++i){if ((edgeTable[cubeIDX] & pow2[i]) != 0){
-//			vertList[i] = 
-//			((Math.abs(isolevel - grid.val[vIdx[i][0]]) < isoDel) ) ? grid.p[vIdx[i][0]] :(
-//				((Math.abs(isolevel - grid.val[vIdx[i][1]]) < isoDel)|| 
-//				(Math.abs(grid.val[vIdx[i][0]] - grid.val[vIdx[i][1]]) < isoDel)) ? grid.p[vIdx[i][1]] :
-//				VertexInterp(grid.p[vIdx[i][0]], grid.p[vIdx[i][1]], grid.val[vIdx[i][0]], grid.val[vIdx[i][1]]));}}
-//
-//		int araIDX = cubeIDX*16;
-//		for (int i = 0; triAra[araIDX + i] != -1; i += 3) {	
-//			triList.add(new myMCTri(new myPoint[]{ vertList[triAra[araIDX + i]], vertList[triAra[araIDX + i + 1]],	vertList[triAra[araIDX + i + 2]]},new myVector(gridI,  gridJ,  gridK))); 
-//		}     
-//	}
-
-	/*
-	 * Linearly interpolate the position where an isosurface cuts an edge between two vertices, each with their own scalar value.
-	 * Bounds check isolevel
-	 */
-	public myVector VertexInterp(myVector p1, myVector p2, float valp1, float valp2) {
-		//float t = ((isolevel - valp1) / (valp2 - valp1));
-		//myVector p = new myVector(p1,((isolevel - valp1) / (valp2 - valp1)),p2);
-		return (new myVector(p1,((isolevel - valp1) / (valp2 - valp1)),p2));
-	}
-	
 
 	public String toString() {
 		String res  ="";// "tris: " + ntri + " volume: " + gx + " " + gy+ " " + gz + " cells: " + numCubes + " iso: " + isolevel;
@@ -273,26 +231,51 @@ public class myMarchingCubes {
 
 class myMCCube {
 	public int idx;
-	private int cubeIDX, ETcubeIDX, araCBIdx;
-	public static int gx = 0, gy = 0, gz = 0, gxgy = 0;
-	public myVector[] p =new myVector[8];
+//	private int cubeIDX, ETcubeIDX, araCBIdx;
+	public static int gx = 0, //gy = 0, gz = 0, 
+			gxgy = 0,
+			tgx = 0, //tgy = 0, tgz = 0, 
+			fgxgy = 0;
+	public myVectorf[] p =new myVectorf[8];
 	public int[] dataPIdx = new int[8];		//idx in data corresponding to each point in cube
 	public float[] val = new float[8];
-	public myMCCube() {
-		idx = 0;
-		for (int i=0; i<8;++i) {
-			p[i] = new myVector(); 
-			val[i] = 0.0f;
-		}
-	}
+	public int[] vIdx;// = new int[12];//1/2 way between corners along edges - 2*dim -1 along each dimension
+//	public myMCCube() {
+//		idx = 0;
+//		for (int i=0; i<8;++i) {
+//			p[i] = new myVectorf(); 
+//			val[i] = 0.0f;
+//		}
+//	}
 	public myMCCube(int i, int j, int k, int _idx, myVector datStep){
 		idx = _idx;
 		int j1 = j+1, k1 = k+1, jgx = j*gx, jgx1 = j1*gx, i1 = i+1;
 		int kgxgy = k*gxgy, k1gxgy = k1 * gxgy;
+		dataPIdx[0] =  i  + jgx  + kgxgy;
+		dataPIdx[1] =  i1 + jgx  + kgxgy;
+		dataPIdx[2] =  i1 + jgx1 + kgxgy;
+		dataPIdx[3] =  i  + jgx1 + kgxgy;
+		dataPIdx[4] =  i  + jgx  + k1gxgy;
+		dataPIdx[5] =  i1 + jgx  + k1gxgy;
+		dataPIdx[6] =  i1 + jgx1 + k1gxgy;
+		dataPIdx[7] =  i  + jgx1 + k1gxgy;
+
 		for (int id=0; id<8;++id) {
-			p[id] = new myVector(); 
+			p[id] = new myVectorf(); 
 			val[id] = 0.0f;
 		}
+
+		//vertex locations, where we split each grid cube into 8 cubes(i.e. halving each side)
+		//in a pure vertex ara these are the locations of the 12 vertices that
+		//follow this pattern
+		//{{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
+		
+		vIdx = new int[] {
+				dataPIdx[0] + dataPIdx[1],dataPIdx[1] + dataPIdx[2],dataPIdx[2] + dataPIdx[3],dataPIdx[3] + dataPIdx[0],		                         
+				dataPIdx[4] + dataPIdx[5],dataPIdx[5] + dataPIdx[6],dataPIdx[6] + dataPIdx[7],dataPIdx[7] + dataPIdx[4],		      
+				dataPIdx[0] + dataPIdx[4], dataPIdx[1] + dataPIdx[5], dataPIdx[2] + dataPIdx[6], dataPIdx[3] + dataPIdx[7]
+		};
+		
 		p[0].set(i * datStep.x, j * datStep.y, k * datStep.z);
 		p[1].set(i1 * datStep.x,j * datStep.y,k * datStep.z);
 		p[2].set(i1 * datStep.x,j1 * datStep.y,k * datStep.z);
@@ -302,186 +285,103 @@ class myMCCube {
 		p[6].set(i1 * datStep.x,j1 * datStep.y,k1 * datStep.z);
 		p[7].set(i * datStep.x,j1 * datStep.y,k1 * datStep.z);
 		
-		dataPIdx[0] =  i  + jgx  + kgxgy;
-		dataPIdx[1] =  i1 + jgx  + kgxgy;
-		dataPIdx[2] =  i1 + jgx1 + kgxgy;
-		dataPIdx[3] =  i  + jgx1 + kgxgy;
-		dataPIdx[4] =  i  + jgx  + k1gxgy;
-		dataPIdx[5] =  i1 + jgx  + k1gxgy;
-		dataPIdx[6] =  i1 + jgx1 + k1gxgy;
-		dataPIdx[7] =  i  + jgx1 + k1gxgy;
 	}
-	public void setVal(float[] data){
-		for (int id=0; id<8;++id) {
-			val[id]=data[dataPIdx[id]];
-		}
-	}	
 	
-	public void setData(int i, int j, int k, float[] data, myVector datStep){
-		int j1 = j+1, k1 = k+1, i1 = i+1;
-		int kgxgy = k*gxgy, jgx = j*gx, jgx1 = j1*gx, k1gxgy = k1 * gxgy;
-		p[0].set(i * datStep.x, j * datStep.y, k * datStep.z);
-		p[1].set(i1 * datStep.x,j * datStep.y,k * datStep.z);
-		p[2].set(i1 * datStep.x,j1 * datStep.y,k * datStep.z);
-		p[3].set(i * datStep.x, j1 * datStep.y,k * datStep.z);
-		p[4].set(i * datStep.x,j * datStep.y,k1 * datStep.z);
-		p[5].set(i1 * datStep.x,j * datStep.y,k1 * datStep.z);
-		p[6].set(i1 * datStep.x,j1 * datStep.y,k1 * datStep.z);
-		p[7].set(i * datStep.x,j1 * datStep.y,k1 * datStep.z);
-
-		val[0] = data[i  + jgx  + kgxgy];
-		val[1] = data[i1 + jgx  + kgxgy];
-		val[2] = data[i1 + jgx1 + kgxgy];
-		val[3] = data[i  + jgx1 + kgxgy];
-		val[4] = data[i  + jgx  + k1gxgy];
-		val[5] = data[i1 + jgx  + k1gxgy];
-		val[6] = data[i1 + jgx1 + k1gxgy];
-		val[7] = data[i  + jgx1 + k1gxgy];
-	}
+	
+//	public void setVal(float[] data){
+//		for (int id=0; id<8;++id) {
+//			val[id]=data[dataPIdx[id]];
+//		}
+//	}	
+//	
+//	public void setData(int i, int j, int k, float[] data, myVector datStep){
+//		int j1 = j+1, k1 = k+1, i1 = i+1;
+//		int kgxgy = k*gxgy, jgx = j*gx, jgx1 = j1*gx, k1gxgy = k1 * gxgy;
+//		p[0].set(i * datStep.x, j * datStep.y, k * datStep.z);
+//		p[1].set(i1 * datStep.x,j * datStep.y,k * datStep.z);
+//		p[2].set(i1 * datStep.x,j1 * datStep.y,k * datStep.z);
+//		p[3].set(i * datStep.x, j1 * datStep.y,k * datStep.z);
+//		p[4].set(i * datStep.x,j * datStep.y,k1 * datStep.z);
+//		p[5].set(i1 * datStep.x,j * datStep.y,k1 * datStep.z);
+//		p[6].set(i1 * datStep.x,j1 * datStep.y,k1 * datStep.z);
+//		p[7].set(i * datStep.x,j1 * datStep.y,k1 * datStep.z);
+//
+//		val[0] = data[i  + jgx  + kgxgy];
+//		val[1] = data[i1 + jgx  + kgxgy];
+//		val[2] = data[i1 + jgx1 + kgxgy];
+//		val[3] = data[i  + jgx1 + kgxgy];
+//		val[4] = data[i  + jgx  + k1gxgy];
+//		val[5] = data[i1 + jgx  + k1gxgy];
+//		val[6] = data[i1 + jgx1 + k1gxgy];
+//		val[7] = data[i  + jgx1 + k1gxgy];
+//	}
 
 }//class myMCCube
-class myMCTri {
-	public myPoint loc = new myPoint(0,0,0);
-	public myPoint p[] = new myPoint[3];
-	public myVector n = new myVector(0, 1, 0);
-	public myVector n1;
-	public myMCTri() {for (int i = 0; i < 3; ++i) {p[i] = new myPoint(0,0,0);}	n = new myVector(0, 1, 0);}
-	public myMCTri(myPoint[] pts,  myVector _loc) {loc = _loc; for (int i = 0; i < 3; ++i) {p[i] = new myPoint(pts[i]);} n.set( new myVector(p[1],p[0])._cross(new myVector(p[2],p[0])));}
-	public myMCTri(myMCTri t, myVector _loc) {loc = _loc; for (int i = 0; i < 3; ++i) {p[i] = new myPoint(t.p[i]);} n.set( new myVector(p[1],p[0])._cross(new myVector(p[2],p[0])));}
-	public void calcVertNorm(){
+class myMCTri {	
+	public myPointf pt[] = new myPointf[3];
+	public myMCVert verts[] = new myMCVert[3];
+	public myVectorf n;
+	public myMCTri(myPointf[] pts) {
+		for (int i = 0; i < 3; ++i) {
+			pt[i] = new myPointf(pts[i]);
+		} 
+		n = myVectorf._normalize( new myVectorf(pt[1],pt[0])._cross(new myVectorf(pt[2],pt[0])));//
 	}
-	
+	public myMCTri(myPointf[] pts, myMCVert[] _v) {
+		for (int i = 0; i < 3; ++i) {
+			pt[i] = new myPointf(pts[i]);
+			verts[i]=_v[i];
+		} 
+		n = myVectorf._normalize( new myVectorf(pt[1],pt[0])._cross(new myVectorf(pt[2],pt[0])));//	
+		for(int i =0; i<3; ++i){
+			verts[i].setVert( n);
+		}
+	}
+
+	public void drawMe(cs7492Proj3 pa){
+		pa.gl_vertex(pt[0]);
+		pa.gl_vertex(pt[1]);
+		pa.gl_vertex(pt[2]);
+	}
+	//draw via verts with per-vertex normals
+	public void drawMeVerts(cs7492Proj3 pa){
+		for(int i =0; i<3; ++i){
+			verts[i].drawMe(pa);
+		}		
+	}
 }//myMCTri
 
-//marching tets
-//typedef struct {
-//double x,y,z;
-//} XYZ;
-//typedef struct {
-//XYZ p[3];
-//} TRIANGLE;
-//typedef struct {
-//XYZ p[8];
-//double val[8];
-//} GRIDCELL;
-//
-///*
-//Polygonise a tetrahedron given its vertices within a cube
-//This is an alternative algorithm to polygonisegrid.
-//It results in a smoother surface but more triangular facets.
-//
-//                   + 0
-//                  /|\
-//                 / | \
-//                /  |  \
-//               /   |   \
-//              /    |    \
-//             /     |     \
-//            +-------------+ 1
-//           3 \     |     /
-//              \    |    /
-//               \   |   /
-//                \  |  /
-//                 \ | /
-//                  \|/
-//                   + 2
-//
-//It's main purpose is still to polygonise a gridded dataset and
-//would normally be called 6 times, one for each tetrahedron making
-//up the grid cell.
-//Given the grid labelling as in PolygniseGrid one would call
-//   PolygoniseTri(grid,iso,triangles,0,2,3,7);
-//   PolygoniseTri(grid,iso,triangles,0,2,6,7);
-//   PolygoniseTri(grid,iso,triangles,0,4,6,7);
-//   PolygoniseTri(grid,iso,triangles,0,6,1,2);
-//   PolygoniseTri(grid,iso,triangles,0,6,1,4);
-//   PolygoniseTri(grid,iso,triangles,5,6,1,4);
-//*/
-//int PolygoniseTri(GRIDCELL g,double iso,
-//TRIANGLE *tri,int v0,int v1,int v2,int v3)
-//{
-//int ntri = 0;
-//int triindex;
-//
-///*
-//   Determine which of the 16 cases we have given which vertices
-//   are above or below the isosurface
-//*/
-//triindex = 0;
-//if (g.val[v0] < iso) triindex |= 1;
-//if (g.val[v1] < iso) triindex |= 2;
-//if (g.val[v2] < iso) triindex |= 4;
-//if (g.val[v3] < iso) triindex |= 8;
-//
-///* Form the vertices of the triangles for each case */
-//switch (triindex) {
-//case 0x00:
-//case 0x0F:
-//   break;
-//case 0x0E:
-//case 0x01:
-//   tri[0].p[0] = VertexInterp(iso,g.p[v0],g.p[v1],g.val[v0],g.val[v1]);
-//   tri[0].p[1] = VertexInterp(iso,g.p[v0],g.p[v2],g.val[v0],g.val[v2]);
-//   tri[0].p[2] = VertexInterp(iso,g.p[v0],g.p[v3],g.val[v0],g.val[v3]);
-//   ntri++;
-//   break;
-//case 0x0D:
-//case 0x02:
-//   tri[0].p[0] = VertexInterp(iso,g.p[v1],g.p[v0],g.val[v1],g.val[v0]);
-//   tri[0].p[1] = VertexInterp(iso,g.p[v1],g.p[v3],g.val[v1],g.val[v3]);
-//   tri[0].p[2] = VertexInterp(iso,g.p[v1],g.p[v2],g.val[v1],g.val[v2]);
-//   ntri++;
-//   break;
-//case 0x0C:
-//case 0x03:
-//   tri[0].p[0] = VertexInterp(iso,g.p[v0],g.p[v3],g.val[v0],g.val[v3]);
-//   tri[0].p[1] = VertexInterp(iso,g.p[v0],g.p[v2],g.val[v0],g.val[v2]);
-//   tri[0].p[2] = VertexInterp(iso,g.p[v1],g.p[v3],g.val[v1],g.val[v3]);
-//   ntri++;
-//   tri[1].p[0] = tri[0].p[2];
-//   tri[1].p[1] = VertexInterp(iso,g.p[v1],g.p[v2],g.val[v1],g.val[v2]);
-//   tri[1].p[2] = tri[0].p[1];
-//   ntri++;
-//   break;
-//case 0x0B:
-//case 0x04:
-//   tri[0].p[0] = VertexInterp(iso,g.p[v2],g.p[v0],g.val[v2],g.val[v0]);
-//   tri[0].p[1] = VertexInterp(iso,g.p[v2],g.p[v1],g.val[v2],g.val[v1]);
-//   tri[0].p[2] = VertexInterp(iso,g.p[v2],g.p[v3],g.val[v2],g.val[v3]);
-//   ntri++;
-//   break;
-//case 0x0A:
-//case 0x05:
-//   tri[0].p[0] = VertexInterp(iso,g.p[v0],g.p[v1],g.val[v0],g.val[v1]);
-//   tri[0].p[1] = VertexInterp(iso,g.p[v2],g.p[v3],g.val[v2],g.val[v3]);
-//   tri[0].p[2] = VertexInterp(iso,g.p[v0],g.p[v3],g.val[v0],g.val[v3]);
-//   ntri++;
-//   tri[1].p[0] = tri[0].p[0];
-//   tri[1].p[1] = VertexInterp(iso,g.p[v1],g.p[v2],g.val[v1],g.val[v2]);
-//   tri[1].p[2] = tri[0].p[1];
-//   ntri++;
-//   break;
-//case 0x09:
-//case 0x06:
-//   tri[0].p[0] = VertexInterp(iso,g.p[v0],g.p[v1],g.val[v0],g.val[v1]);
-//   tri[0].p[1] = VertexInterp(iso,g.p[v1],g.p[v3],g.val[v1],g.val[v3]);
-//   tri[0].p[2] = VertexInterp(iso,g.p[v2],g.p[v3],g.val[v2],g.val[v3]);
-//   ntri++;
-//   tri[1].p[0] = tri[0].p[0];
-//   tri[1].p[1] = VertexInterp(iso,g.p[v0],g.p[v2],g.val[v0],g.val[v2]);
-//   tri[1].p[2] = tri[0].p[2];
-//   ntri++;
-//   break;
-//case 0x07:
-//case 0x08:
-//   tri[0].p[0] = VertexInterp(iso,g.p[v3],g.p[v0],g.val[v3],g.val[v0]);
-//   tri[0].p[1] = VertexInterp(iso,g.p[v3],g.p[v2],g.val[v3],g.val[v2]);
-//   tri[0].p[2] = VertexInterp(iso,g.p[v3],g.p[v1],g.val[v3],g.val[v1]);
-//   ntri++;
-//   break;
-//}
-//
-//return(ntri);
-//}
-//
+//class to store vertexes of triangle - will calculate normal based on all triangles that share this vertex
+class myMCVert{
+	public int numTris = 0;
+	public myPointf loc = new myPointf();
+	public myVectorf rawN = new myVectorf();			//raw unit normal == actual normal * # tris sharing this vertex
+	public myVectorf n = new myVectorf();
+	public myMCVert(){
+		clearVert();
+	}
+	public void clearVert(){
+		numTris = 0;
+		loc.set(0,0,0);
+		rawN.set(0,0,0);
+	}
+	
+	public void setInitVert(myPointf _loc){
+		loc.set(_loc);		
+	}
+	
+	//set the location of this vert, and the initial normal and # tris
+	public void setVert(myVectorf _norm){
+		numTris++;				//increment # of triangles sharing this vertex
+		rawN._add(_norm);
+		n.set(myVectorf._div(rawN, numTris));		//keep rawN around so we don't have to re-calculate normal all the time			
+	}
+
+	//draw per vert normal
+	public void drawMe(cs7492Proj3 pa){
+		pa.gl_normal(n);                                         // changes normal for smooth shading		
+		pa.gl_vertex(loc);
+	}
+		
+}//
 
