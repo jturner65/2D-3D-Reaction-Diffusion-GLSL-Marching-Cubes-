@@ -88,9 +88,11 @@ public class myMarchingCubes {
 	
 	public void synchSetVertList(int idx, myPointf _loc){
 		synchronized(usedVertList){
-			myMCVert tmp = vertList.get(idx);
-			tmp.setInitVert(_loc);
-			usedVertList.put(idx, tmp);
+		//	if(null == usedVertList.get(idx)){
+				myMCVert tmp = vertList.get(idx);
+				tmp.setInitVert(_loc);
+				usedVertList.put(idx, tmp);
+	//		}
 		}
 	}
 	
@@ -264,6 +266,7 @@ class myMCCube {
 		dataPIdx[1] =  i1 + jgx  + kgxgy;
 		dataPIdx[2] =  i1 + jgx1 + kgxgy;
 		dataPIdx[3] =  i  + jgx1 + kgxgy;
+		
 		dataPIdx[4] =  i  + jgx  + k1gxgy;
 		dataPIdx[5] =  i1 + jgx  + k1gxgy;
 		dataPIdx[6] =  i1 + jgx1 + k1gxgy;
@@ -280,9 +283,20 @@ class myMCCube {
 		//{{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
 		
 		vIdx = new int[] {
-				dataPIdx[0] + dataPIdx[1],dataPIdx[1] + dataPIdx[2],dataPIdx[2] + dataPIdx[3],dataPIdx[3] + dataPIdx[0],		                         
-				dataPIdx[4] + dataPIdx[5],dataPIdx[5] + dataPIdx[6],dataPIdx[6] + dataPIdx[7],dataPIdx[7] + dataPIdx[4],		      
-				dataPIdx[0] + dataPIdx[4], dataPIdx[1] + dataPIdx[5], dataPIdx[2] + dataPIdx[6], dataPIdx[3] + dataPIdx[7]
+				dataPIdx[0] + dataPIdx[1],
+				dataPIdx[1] + dataPIdx[2],
+				dataPIdx[2] + dataPIdx[3],
+				dataPIdx[3] + dataPIdx[0],
+				
+				dataPIdx[4] + dataPIdx[5],
+				dataPIdx[5] + dataPIdx[6],
+				dataPIdx[6] + dataPIdx[7],
+				dataPIdx[7] + dataPIdx[4],	
+				
+				dataPIdx[0] + dataPIdx[4], 
+				dataPIdx[1] + dataPIdx[5], 
+				dataPIdx[2] + dataPIdx[6], 
+				dataPIdx[3] + dataPIdx[7]
 		};
 		
 		p[0].set(i * datStep.x, j * datStep.y, k * datStep.z);
@@ -334,16 +348,20 @@ class myMCTri {
 		for (int i = 0; i < 3; ++i) {
 			pt[i] = new myPointf(pts[i]);
 		} 
-		n = myVectorf._normalize( new myVectorf(pt[1],pt[0])._cross(new myVectorf(pt[2],pt[0])));//
+		//n = new myVectorf(pt[0],pt[1])._cross(new myVectorf(pt[0],pt[2]));
 	}
-	public myMCTri(myPointf[] pts, myMCVert[] _v) {
+	public myMCTri( myMCVert[] _v) {
 		for (int i = 0; i < 3; ++i) {
-			pt[i] = new myPointf(pts[i]);
 			verts[i]=_v[i];
+			pt[i] = new myPointf(verts[i].loc);
 		} 
-		n = myVectorf._normalize( new myVectorf(pt[1],pt[0])._cross(new myVectorf(pt[2],pt[0])));//	
+		n = new myVectorf(pt[0],pt[1])._cross(new myVectorf(pt[0],pt[2]));
+		if(n.sqMagn < .000001f){
+			n = new myVectorf(pt[0],pt[2])._cross(new myVectorf(pt[2],pt[1]));
+		}
+		n._normalize();//	
 		for(int i =0; i<3; ++i){
-			verts[i].setVert( n);
+			verts[i].setVert(n);
 		}
 	}
 
@@ -355,8 +373,8 @@ class myMCTri {
 	//draw via verts with per-vertex normals
 	public void drawMeVerts(cs7492Proj3 pa){
 		for(int i =0; i<3; ++i){
-			pa.gl_normal(verts[i].n); 
-			pa.gl_vertex(verts[i].loc);
+			pa.gl_normal(verts[i].n._normalize()); 
+			pa.gl_vertex(pt[i]);
 		}		
 	}
 }//myMCTri

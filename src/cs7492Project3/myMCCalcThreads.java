@@ -109,7 +109,7 @@ public class myMCCalcThreads implements Callable<Boolean> {
 	 */
 	public void toTriangleVertShade(myMCCube grid, int gridI, int gridJ, int modIsoLvl) {
 		int cubeIDX = 0;		
-		myPointf vertList[] = new myPointf[12];//only possible 0-11 idxs in vert list
+	//	myPointf vertList[] = new myPointf[12];//only possible 0-11 idxs in vert list
 		
 		//Determine the index into the edge table which tells us which vertices are inside of the surface
 		for(int i =0; i<grid.val.length;++i){if(grid.val[i] < modIsoLvl){	cubeIDX |= pow2[i];}}		
@@ -121,24 +121,21 @@ public class myMCCalcThreads implements Callable<Boolean> {
 		for(int i =0; i<vIdx.length;++i){
 			if ((edgeTable[cubeIDX] & pow2[i]) != 0){
 				idx0 = vIdx[i][0];	idx1 = vIdx[i][1];
-				vertList[i] = VertexInterp(grid.p[idx0], grid.p[idx1], grid.val[idx0], grid.val[idx1], modIsoLvl);
-				MC.synchSetVertList(grid.vIdx[i], vertList[i]);
+			//	vertList[i] = VertexInterp(grid.p[idx0], grid.p[idx1], grid.val[idx0], grid.val[idx1], modIsoLvl);
+				MC.synchSetVertList(grid.vIdx[i], VertexInterp(grid.p[idx0], grid.p[idx1], grid.val[idx0], grid.val[idx1], modIsoLvl));
 
 			}}
 		// Create the triangle
-		int araIDX = cubeIDX << 4, araIDXpI, tIDX0, tIDX1, tIDX2, gtIDX0, gtIDX1, gtIDX2;
+		int araIDX = cubeIDX << 4, araIDXpI,gtIDX0, gtIDX1, gtIDX2;
 		//myVectorf _loc = new myVectorf(gridI,  gridJ,  gridK);
 		myMCTri tmpTri;
 		for (int i = 0; triAra[araIDX + i] != -1; i += 3) {	
 			araIDXpI = araIDX + i;
-			tIDX0 = triAra[araIDXpI];
-			tIDX1 = triAra[araIDXpI + 1];
-			tIDX2 = triAra[araIDXpI + 2];
-			gtIDX0 = grid.vIdx[tIDX0];
-			gtIDX1 = grid.vIdx[tIDX1];
-			gtIDX2 = grid.vIdx[tIDX2];
+			gtIDX0 = grid.vIdx[triAra[araIDXpI]];
+			gtIDX1 = grid.vIdx[triAra[araIDXpI + 1]];
+			gtIDX2 = grid.vIdx[triAra[araIDXpI + 2]];
 			
-			tmpTri = new myMCTri(new myPointf[]{ vertList[tIDX0], vertList[tIDX1],	vertList[tIDX2]},
+			tmpTri = new myMCTri(//new myPointf[]{ vertList[tIDX0], vertList[tIDX1],	vertList[tIDX2]},
 					new myMCVert[]{MC.usedVertList.get(gtIDX0),MC.usedVertList.get(gtIDX1),MC.usedVertList.get(gtIDX2) });
 			triList.add(tmpTri); 
 		}     
