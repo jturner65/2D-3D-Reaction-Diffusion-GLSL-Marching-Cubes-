@@ -15,7 +15,7 @@ public class myMCCalcThreads implements Callable<Boolean> {
 	// obj data
 	public static float isolevel;
 	
-	public static final double isoDel = 0.00001;		//1-time init
+	public static final double isoDel = 0;//0.00001;		//1-time init
 	public static final int[] pow2 = new int[]{1,2,4,8,16,32,64,128,256,512,1024,2048,4096, 8192, 16384, 32768 };
 
 	public int gridK, stIdx, endIdx;
@@ -38,14 +38,18 @@ public class myMCCalcThreads implements Callable<Boolean> {
 		endIdx  =_edIdx;
 	}
 
-	public void buildTris(){
+	public void buildTris(){		
+		//instead of modifying each data value by shifting, masking and division, can we multiply and shift the iso level - 1 time mult + shift instead of many shift/divs
 		int idx = stIdx;
+		int modIsoLvl = (int)(isolevel*256.0f)<<disp;
+		int mask = 0xFF << disp;			//mask is necessary, both u and v results returned simultaneously
 		for(int j = 0; j < endJ; ++j){
 			for (int i = 0; i < endI; ++i) {
 				for (int id=0; id<8;++id) {
-					grid[idx].val[id]= ((intData[grid[idx].dataPIdx[id]] >> disp & 0xFF)/256.0f);
+					//grid[idx].val[id]= ((intData[grid[idx].dataPIdx[id]] >> disp & 0xFF));///256.0f);
+					grid[idx].val[id]= ((intData[grid[idx].dataPIdx[id]] & mask));
 				}
-				toTriangle(grid[idx], i, j);
+				toTriangle(grid[idx], i, j, modIsoLvl);
 				++idx;
 			}
 		}		
@@ -61,13 +65,14 @@ public class myMCCalcThreads implements Callable<Boolean> {
 	 * Given a grid cell and an isolevel, calculate the facets required to represent the isosurface through the cell. Return the number
 	 * of triangular facets, the lclTris ara will have the verts of =< 5 triangular facets. 0 will be returned if the grid cell
 	 * is either totally above of totally below the isolevel.
+	 * modIsoLvl is iso level made into bit mask
 	 */
-	public void toTriangle(myMCCube grid, int gridI, int gridJ) {
+	public void toTriangle(myMCCube grid, int gridI, int gridJ, int modIsoLvl) {
 		int cubeIDX = 0;		
 		myPoint vertList[] = new myPoint[12];
 		
 		//Determine the index into the edge table which tells us which vertices are inside of the surface
-		for(int i =0; i<grid.val.length;++i){if(grid.val[i] < isolevel){	cubeIDX |= pow2[i];}}		
+		for(int i =0; i<grid.val.length;++i){if(grid.val[i] < modIsoLvl){	cubeIDX |= pow2[i];}}		
 
 		// Cube is entirely in/out of the surface
 		if (edgeTable[cubeIDX] == 0) {	return ;}
@@ -75,10 +80,10 @@ public class myMCCalcThreads implements Callable<Boolean> {
 		for(int i =0; i<vIdx.length;++i){
 			if ((edgeTable[cubeIDX] & pow2[i]) != 0){
 				vertList[i] = 
-						((Math.abs(isolevel - grid.val[vIdx[i][0]]) < isoDel)) ? grid.p[vIdx[i][0]] :(
-							((Math.abs(isolevel - grid.val[vIdx[i][1]]) < isoDel)|| 
-							(Math.abs(grid.val[vIdx[i][0]] - grid.val[vIdx[i][1]]) < isoDel)) ? grid.p[vIdx[i][1]] :
-							VertexInterp(grid.p[vIdx[i][0]], grid.p[vIdx[i][1]], grid.val[vIdx[i][0]], grid.val[vIdx[i][1]]));
+						((Math.abs(modIsoLvl - grid.val[vIdx[i][0]]) < 0)) ? grid.p[vIdx[i][0]] :(
+							((Math.abs(modIsoLvl - grid.val[vIdx[i][1]]) < 0)|| 
+							(Math.abs(grid.val[vIdx[i][0]] - grid.val[vIdx[i][1]]) < 0)) ? grid.p[vIdx[i][1]] :
+							VertexInterp(grid.p[vIdx[i][0]], grid.p[vIdx[i][1]], grid.val[vIdx[i][0]], grid.val[vIdx[i][1]], modIsoLvl));
 			}}
 		// Create the triangle
 
@@ -88,13 +93,13 @@ public class myMCCalcThreads implements Callable<Boolean> {
 			triList.add(new myMCTri(new myPoint[]{ vertList[triAra[araIDX + i]], vertList[triAra[araIDX + i + 1]],	vertList[triAra[araIDX + i + 2]]},new myVector(gridI,  gridJ,  gridK))); 
 		}     
 	}//toTriangle
-	
+
 	/* 
 	 * Linearly interpolate the position where an isosurface cuts an edge between two vertices, each with their own scalar value.
 	 * Bounds check isolevel
 	 */
-	public myVector VertexInterp(myVector p1, myVector p2, float valp1, float valp2) {
-		return (new myVector(p1,((isolevel - valp1) / (valp2 - valp1)),p2));
+	public myVector VertexInterp(myVector p1, myVector p2, float valp1, float valp2, float valPt) {
+		return (new myVector(p1,((valPt - valp1) / (valp2 - valp1)),p2));
 	}
 	
 	@Override
