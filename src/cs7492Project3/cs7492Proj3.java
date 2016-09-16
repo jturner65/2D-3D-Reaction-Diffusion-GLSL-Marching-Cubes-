@@ -47,7 +47,14 @@ public class cs7492Proj3 extends PApplet {
 	public myRDSolver RD;
 	public ExecutorService th_exec;
 	public int numThreadsAvail;
-	
+	public static void main(String[] passedArgs) {
+	    String[] appletArgs = new String[] { "cs7492Project3.cs7492Proj3" };
+	    if (passedArgs != null) {
+	    	PApplet.main(PApplet.concat(appletArgs, passedArgs));
+	    } else {
+	    	PApplet.main(appletArgs);
+	    }
+	 }
 	public void settings(){
 		size((int)(displayWidth*.95f), (int)(displayHeight*.9f),P3D);
 	}
