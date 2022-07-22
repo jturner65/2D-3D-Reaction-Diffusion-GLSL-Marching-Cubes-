@@ -21,11 +21,11 @@ public class my3DGLSLSolver {
 	public final int gridPxlW3D, gridPxlH3D;
 	public int gridX ,gridY ,gridZ;
 
-	public final int seedSize = 10, seedNum = 50;			//seed vals to initialze grid - seedNum is 
+	public final int seedSizeSq = 10*10;			//seed vals to initialze grid 
 	
 	public base_MarchingCubes MC;
 	public float deltaT;
-	PImage tmp;
+	//PImage tmp;
 
 	// sim values that will be passed to the shader
 	public float ru, rv, k, f;
@@ -51,13 +51,14 @@ public class my3DGLSLSolver {
 //		p.outStr2Scr("my3DGLSLSolver " + pCnt++, false);
 		shdrBuf3D = p.createGraphics(gridPxlW3D, gridPxlH3D, PConstants.P3D); // Image drawn onto by & re-fed to the shader every loop
 		
+		// debug image creation
+//		tmp= p.createImage(gridPxlW3D, gridPxlH3D, p.RGB);
+//		tmp.loadPixels();
+//		for (int i = 0; i < tmp.pixels.length; i++) {
+//			tmp.pixels[i] = 0xff0000FF;
+//		}
+//		tmp.updatePixels();
 		
-		tmp= p.createImage(gridPxlW3D, gridPxlH3D, p.RGB);
-		tmp.loadPixels();
-		for (int i = 0; i < tmp.pixels.length; i++) {
-			tmp.pixels[i] = 0xff0000FF;
-		}
-		tmp.updatePixels();
 		init3DShader(shdrBuf3D, gridPxlW3D, gridPxlH3D);
 	}
 	
@@ -66,7 +67,7 @@ public class my3DGLSLSolver {
 	}
 
 	public boolean checkRandAssign(int x, int y, float[] randVal){
-		for(int i =0; i<randVal.length; i+=2){if(((x - randVal[i])*(x - randVal[i])) + ((y - randVal[i+1])*(y - randVal[i+1])) < seedSize * seedSize){return true;}}
+		for(int i =0; i<randVal.length; i+=2){if(((x - randVal[i])*(x - randVal[i])) + ((y - randVal[i+1])*(y - randVal[i+1])) < seedSizeSq){return true;}}
 		return false;
 	}
 	public void init3DShader(PGraphics _buf, int w,int h){
@@ -101,10 +102,9 @@ public class my3DGLSLSolver {
 	    RD3Dshader.set("diffOnly", diffOnly);
 	    //RD3Dshader.set("numIters", numShdrIters);
 	    RD3Dshader.set("locMap", locMap);		
-	    shdrBuf3D.textureMode(p.NORMAL);
+	    shdrBuf3D.textureMode(PConstants.NORMAL);
 		for(int i=0 ; i<numShdrIters ; ++i) {
-			// Set the uniforms of the shader
-			
+			// Set the uniforms of the shader			
 			RD3Dshader.set("texture",  shdrBuf3D );
 			
 		    //RD3Dshader.set("dispChemU", dispChemU);		
@@ -138,28 +138,21 @@ public class my3DGLSLSolver {
  	   	
  	   //shdrBuf3D.sphere(rad);
  	   shdrBuf3D.ellipse( 0,0, rad, rad);
-	   	
-//	   	for(int j=0;j<maxDiam;++j){
-//	    	rad = maxRad * (float)Math.sin(Math.acos(d/maxRad));
-//	    	shdrBuf3D.ellipse( 0,0, rad, rad);
-//	    	d -=1;
-//	    	shdrBuf3D.translate(gridX, 0);
-//	   	}
 
-	   	
 	   	shdrBuf3D.popMatrix();	    
 	}
 	
 
 	public void drawShaderRes(){		  
        	shdrBuf3D.loadPixels();
-       	p.pushMatrix();
-       	p.translate(-.5f*gridPxlW3D, 0);
-       	p.image( shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result
+//		uncomment to display shader result as flat image
+//       	p.pushMatrix();
+//       	p.translate(-.5f*gridPxlW3D, 0);
+//       	p.image( shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result from shader as image
 //       	p.translate(0.0f, 2.0f*gridPxlH3D);
 //       	p.image(tmp, 0, 0, gridPxlW3D, gridPxlH3D ); 
 //       	System.out.println("w : " + gridPxlW3D +" | h : " + gridPxlH3D);
-       	p.popMatrix();
+//       	p.popMatrix();
        	MC.copyDataAraToMCLclData(shdrBuf3D.pixels);
 	}
 	
