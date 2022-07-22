@@ -7,14 +7,14 @@ precision lowp float;
 uniform vec2 texOffset;
 uniform sampler2D texture; 
 
-//uniform int xWidth;         	// width
-//uniform int yHeight;          	// height
+uniform int xWidth;         	// width
+uniform int yHeight;          	// height
 uniform float ru;         	// rate of diffusion of U
 uniform float rv;          	// rate of diffusion of V
 uniform float f;           	// f in grey scott
 uniform float k;           	// k in grey scott
 uniform float distZ;
-uniform float deltaT;		// delta t  - shouldn't go higher than about 2 or blows up
+uniform float deltaT;		// delta t  - shouldn't go higher than 2 or blows up
 uniform float diffOnly;		// 1 == diffusion only
 uniform float locMap;		// 1 == location-based k and f map
 //uniform float numIters;		//number of iterations we should execute
@@ -32,11 +32,11 @@ void main(void){
 	float wd = (w+d);
 	float wmd = (w-d);
 	
-	float stencilCtr = -3.0;//-2.5;
+	float stencilCtr = -2.5;
 	float stencLvl1 = 0.166666;			//6 places
 	float stencLvl2 = 0.083333;			//12 places
-	float stencLvl3 = 0.1275;				//8 places
-	//float stencLvl3 = 0.063725;				//8 places
+	//float stencLvl3 = 0.1275;				//8 places
+	float stencLvl3 = 0.063725;				//8 places
 
 	stencil3D[0]  = stencLvl3;	stencil3D[1]  = stencLvl2;	stencil3D[2]  = stencLvl3;
 	stencil3D[3]  = stencLvl2;	stencil3D[4]  = stencLvl1;	stencil3D[5]  = stencLvl2;
@@ -61,15 +61,15 @@ void main(void){
 //		-h, 0, h,
 //		-h, 0, h
 //	);
-	//	-d : next lower plane
+//
 	offset3D[0] = vec2(-wd,-h);		offset3D[1] = vec2(-d,-h);		offset3D[2] = vec2(wmd,-h);
 	offset3D[3] = vec2(-wd,0.0);	offset3D[4] = vec2(-d,0.0);		offset3D[5] = vec2(wmd,0.0);
 	offset3D[6] = vec2(-wd,h);		offset3D[7] = vec2(-d,h);		offset3D[8] = vec2(wmd,h);
-	//this plane
+
 	offset3D[9] = vec2(-w,-h);		offset3D[10] = vec2(0.0, -h);	offset3D[11] = vec2(w, -h);
 	offset3D[12] = vec2(-w,0.0);	offset3D[13] = vec2(0.0, 0.0);	offset3D[14] = vec2(w, 0.0);
 	offset3D[15] = vec2(-w,h);		offset3D[16] = vec2(0.0, h);	offset3D[17] = vec2(w, h);
-	//next higher plane +d
+
 	offset3D[18] = vec2(-wmd,-h);	offset3D[19] = vec2(d, -h);		offset3D[20] = vec2(wd, -h);
 	offset3D[21] = vec2(-wmd,0.0);	offset3D[22] = vec2(d, 0.0);	offset3D[23] = vec2(wd, 0.0);
 	offset3D[24] = vec2(-wmd,h);	offset3D[25] = vec2(d, h);		offset3D[26] = vec2(wd, h);
@@ -91,7 +91,7 @@ void main(void){
 	vec2 lap = vec2( 0.0, 0.0);	
    // Loop through the neighbouring pixels and compute Laplacian
 
-	for( int i=0; i<STENCIL_SIZE; ++i ){
+	for( int i=0; i<STENCIL_SIZE; i++ ){
 		vec2 tmp	= texture2D( texture, texCoord + offset3D[i] ).rg;
 		lap			+= tmp * stencil3D[i];
 	}

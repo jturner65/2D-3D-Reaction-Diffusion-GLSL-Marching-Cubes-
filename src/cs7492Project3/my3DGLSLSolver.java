@@ -11,25 +11,26 @@ public class my3DGLSLSolver {
 	
 	//public PImage resImageU, resImageV, redMask, greenMask;//, resDataImage              
 	public PGraphics shdrBuf3D;//, shdrBufMC; 			// Image drawn onto by & re-fed to the shader every loop
-	public PShader RD3Dshader, MCShader;
+	public PShader RD3Dshader;//, MCShader;
 	// Set the speed of the reaction (number of loops for each frame)
 	public int numShdrIters = 5;
 	
 	public final int cell3dSize;
-	public float maxRad, maxDiam,pageSiz;
+	public float maxRad, maxDiam,pageSiz, gridDistZ;
 	
-	public int gridPxlW3D, gridPxlH3D;
+	public final int gridPxlW3D, gridPxlH3D;
 	public int gridX ,gridY ,gridZ;
 
 	public final int seedSize = 10, seedNum = 50;			//seed vals to initialze grid - seedNum is 
 	
-	public myMarchingCubes MC;
+	public base_MarchingCubes MC;
 	public float deltaT;
+	PImage tmp;
 
 	// sim values that will be passed to the shader
 	public float ru, rv, k, f;
 	//pass dimensions of cell grid - use 1 pixel in shader image per gridcell
-	public my3DGLSLSolver(cs7492Proj3 _p, myRDSolver _rd, myMarchingCubes _MC, int _cellSize) {
+	public my3DGLSLSolver(cs7492Proj3 _p, myRDSolver _rd, base_MarchingCubes _MC, int _cellSize) {
 		p = _p; cell3dSize = _cellSize;
 		MC = _MC;		
 		gridX = p.gridDimX/cell3dSize;
@@ -39,16 +40,24 @@ public class my3DGLSLSolver {
 		gridPxlH3D =  gridY;	
 		maxRad = (gridX/(cell3dSize*10));
 		maxDiam = maxRad*2 +1;
-		pageSiz = gridX*cell3dSize;
+		pageSiz = p.gridDimZ;
+		gridDistZ = 1.0f/gridZ;//distance in texture between equivalent points in z direction
 		RD3Dshader = p.loadShader("reactDiffuse3d.frag");	
-		MCShader = p.loadShader("marchCube3d.frag");	
+		//MCShader = p.loadShader("marchCube3d.frag");	
 		
 //		shdrBufMC = p.createGraphics(gridPxlW3D, gridPxlH3D, PConstants.P3D);
 //		p.outStr2Scr("my3DGLSLSolver " + pCnt++, false);
 //		MC.resCubeIdxImg = new PImage(shdrBufMC.width, shdrBufMC.height);
 //		p.outStr2Scr("my3DGLSLSolver " + pCnt++, false);
-		
 		shdrBuf3D = p.createGraphics(gridPxlW3D, gridPxlH3D, PConstants.P3D); // Image drawn onto by & re-fed to the shader every loop
+		
+		
+		tmp= p.createImage(gridPxlW3D, gridPxlH3D, p.RGB);
+		tmp.loadPixels();
+		for (int i = 0; i < tmp.pixels.length; i++) {
+			tmp.pixels[i] = 0xff0000FF;
+		}
+		tmp.updatePixels();
 		init3DShader(shdrBuf3D, gridPxlW3D, gridPxlH3D);
 	}
 	
@@ -61,7 +70,7 @@ public class my3DGLSLSolver {
 		return false;
 	}
 	public void init3DShader(PGraphics _buf, int w,int h){
-        _buf.beginDraw();
+        //_buf.beginDraw();
         _buf.loadPixels();
         int idx = 0;
         for(int x = 0; x<w; ++x){
@@ -70,7 +79,7 @@ public class my3DGLSLSolver {
             }      
         }
         _buf.updatePixels();
-        _buf.endDraw();				
+        //_buf.endDraw();				
 	}
 
 	public void setRDSimVals(float _ru, float _rv, float _k, float _f){ru=_ru; rv=_rv; k=_k; f=_f;}
@@ -78,31 +87,36 @@ public class my3DGLSLSolver {
 	public void calcConc3dShader(){
 		deltaT = p.guiObjs[p.gIDX_deltaT].valAsFloat();
 		float diffOnly = p.flags[p.useOnlyDiff] ? 1.0f : 0.0f,
-				dispChemU = p.flags[p.dispChemU] ? 1.0f : 0.0f,
-				isoLevel =  p.flags[p.dispChemU] ?  p.guiObjs[p.gIDX_isoLvl].valAsFloat() : 1.0f - p.guiObjs[p.gIDX_isoLvl].valAsFloat(),
+				//dispChemU = p.flags[p.dispChemU] ? 1.0f : 0.0f,
+				//isoLevel =  p.flags[p.dispChemU] ?  p.guiObjs[p.gIDX_isoLvl].valAsFloat() : 1.0f - p.guiObjs[p.gIDX_isoLvl].valAsFloat(),
 				locMap = p.flags[p.useSpatialParams] ? 1.0f : 0.0f;	
-		for(int i=0 ; i<numShdrIters ; i++) {
+//		RD3Dshader.set("xWidth", gridX);
+//		RD3Dshader.set("yHeight", gridY);
+	    RD3Dshader.set("ru", ru);
+	    RD3Dshader.set("rv", rv);
+	    RD3Dshader.set("k", k);
+	    RD3Dshader.set("f", f);
+	    RD3Dshader.set("distZ", gridDistZ);
+	    RD3Dshader.set("deltaT", deltaT);
+	    RD3Dshader.set("diffOnly", diffOnly);
+	    //RD3Dshader.set("numIters", numShdrIters);
+	    RD3Dshader.set("locMap", locMap);		
+	    shdrBuf3D.textureMode(p.NORMAL);
+		for(int i=0 ; i<numShdrIters ; ++i) {
 			// Set the uniforms of the shader
-			RD3Dshader.set("texture",    shdrBuf3D );
-		    RD3Dshader.set("ru", ru);
-		    RD3Dshader.set("rv", rv);
-		    RD3Dshader.set("k", k);
-		    RD3Dshader.set("f", f);
-		    RD3Dshader.set("distZ", 1.0f/gridZ);
-		    RD3Dshader.set("deltaT", deltaT);
-		    RD3Dshader.set("diffOnly", diffOnly);
-		    //RD3Dshader.set("numIters", numShdrIters);
-		    RD3Dshader.set("locMap", locMap);				
+			
+			RD3Dshader.set("texture",  shdrBuf3D );
+			
 		    //RD3Dshader.set("dispChemU", dispChemU);		
 			// Start drawing into the PGraphics object
-			shdrBuf3D.beginDraw();	    
+			shdrBuf3D.beginDraw();	   
 			shdrBuf3D.textureWrap(PConstants.REPEAT);
-			shdrBuf3D.shader(RD3Dshader);	    
+			shdrBuf3D.shader(RD3Dshader);	
+			
 			shdrBuf3D.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D); 	    
-			shdrBuf3D.resetShader();	    
-		    if(p.flags[p.mouseClicked]) {
-		    	 mouseClick3D();
-		    }
+			shdrBuf3D.resetShader();
+		    if(p.flags[p.mouseClicked]) {	    	 mouseClick3D();    }
+		    	    
 			shdrBuf3D.endDraw();
 		}	
         //resDataImage.copy(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D, 0, 0,  gridPxlW3D, gridPxlH3D);
@@ -114,26 +128,39 @@ public class my3DGLSLSolver {
 	
 	public void mouseClick3D(){	
 	   	shdrBuf3D.pushMatrix();  	shdrBuf3D.noStroke();
-    	float rad = 0, d = maxRad;
+    	float d = maxRad, rad=d;
     	//shdrBuf3D.translate(p.mseIn3DBox.x/cell3dSize, p.mseIn3DBox.y/cell3dSize, p.mseIn3DBox.z/cell3dSize);
     	myPoint pt = p.P(p.c.mseIn3DBox);
     	pt._div(cell3dSize);
     	//t++;if(t % 10 == 0){ 		p.outStr2Scr(pt.toStrBrf());  	}
     	shdrBuf3D.translate((float)(pt.y + (gridX * (int)pt.z)),(float)(pt.x));//, (float)(pt.z));//,
  	   	shdrBuf3D.fill(255,255,0,155 );//sets concentration at this location
-	   	for(int j=0;j<maxDiam;++j){
-	    	rad = maxRad * (float)Math.sin(Math.acos(d/maxRad));
-	    	shdrBuf3D.ellipse( 0,0, rad, rad);
-	    	d -=1;
-	    	shdrBuf3D.translate(pageSiz, 0);
-	   	}
+ 	   	
+ 	   //shdrBuf3D.sphere(rad);
+ 	   shdrBuf3D.ellipse( 0,0, rad, rad);
+	   	
+//	   	for(int j=0;j<maxDiam;++j){
+//	    	rad = maxRad * (float)Math.sin(Math.acos(d/maxRad));
+//	    	shdrBuf3D.ellipse( 0,0, rad, rad);
+//	    	d -=1;
+//	    	shdrBuf3D.translate(gridX, 0);
+//	   	}
+
+	   	
 	   	shdrBuf3D.popMatrix();	    
 	}
 	
 
 	public void drawShaderRes(){		  
        	shdrBuf3D.loadPixels();
-       	MC.copyColorAraToData(shdrBuf3D.pixels);
+       	p.pushMatrix();
+       	p.translate(-.5f*gridPxlW3D, 0);
+       	p.image( shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result
+//       	p.translate(0.0f, 2.0f*gridPxlH3D);
+//       	p.image(tmp, 0, 0, gridPxlW3D, gridPxlH3D ); 
+//       	System.out.println("w : " + gridPxlW3D +" | h : " + gridPxlH3D);
+       	p.popMatrix();
+       	MC.copyDataAraToMCLclData(shdrBuf3D.pixels);
 	}
 	
 	public void draw() {		
@@ -142,7 +169,7 @@ public class my3DGLSLSolver {
 		//p.translate(-gridPxlW3D*.5f, 0,1);
 		drawShaderRes();
 		p.popStyle();p.popMatrix();			
-		MC.draw();
+		MC.draw(p);
 	}
 	
 }

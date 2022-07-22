@@ -33,7 +33,7 @@ public class myRDSolver {
 	public int numShdrIters = 20;
 //	//use the shader for 3d
 	public my3DGLSLSolver glslSolver;
-	public myMarchingCubes MC;
+	public base_MarchingCubes MC;
 	
 	// size of cells - 2d
 	public final int cell2dSize = 4;
@@ -82,13 +82,13 @@ public class myRDSolver {
 		k = 0.0625f;
 		f = 0.035f;				
 		gridPxlW2D = gw; gridPxlH2D = gh;
-		gridWidth = ((gw) / (cell2dSize));
-		gridHeight = ((gh) / (cell2dSize));
+		gridWidth = (gw / (cell2dSize));
+		gridHeight = (gh / (cell2dSize));
 		//shader stuff
 		initShaders(true);
-		int pCnt = 1;
-		MC = new myMarchingCubes(p, cell3dSize);	
-		p.th_exec.execute(new buildMCData(MC, MC.vgx * MC.vgy * MC.vgz));	
+		//int pCnt = 1;
+		MC = new myMarchingCubes(p, p.th_exec, cell3dSize, p.gridDimX, p.gridDimY, p.gridDimZ);	
+		//p.th_exec.execute(new buildMCData(MC, MC.vgx * MC.vgy * MC.vgz));	
 		glslSolver = new my3DGLSLSolver(p, this, MC, cell3dSize);
 		glslSolver.setRDSimVals(ru, rv, k, f);			
 		//2d stuff below		
@@ -158,15 +158,15 @@ public class myRDSolver {
 		deltaT = p.guiObjs[p.gIDX_deltaT].valAsFloat();
 		float diffOnly = p.flags[p.useOnlyDiff] ? 1.0f : 0.0f,
 				locMap = p.flags[p.useSpatialParams] ? 1.0f : 0.0f;		
+	    RD_shader.set("ru", ru);
+	    RD_shader.set("rv", rv);
+	    RD_shader.set("k", k);
+	    RD_shader.set("f", f);
+	    RD_shader.set("deltaT", deltaT);
+	    RD_shader.set("diffOnly", diffOnly);
+	    RD_shader.set("locMap", locMap);
 		for(int i = 0; i<numShdrIters; ++i){
 		    RD_shader.set("texture", shdrBuf2D );
-		    RD_shader.set("ru", ru);
-		    RD_shader.set("rv", rv);
-		    RD_shader.set("k", k);
-		    RD_shader.set("f", f);
-		    RD_shader.set("deltaT", deltaT);
-		    RD_shader.set("diffOnly", diffOnly);
-		    RD_shader.set("locMap", locMap);
 		    		   
 		    shdrBuf2D.beginDraw(); 											// begin using the buffer
 		    shdrBuf2D.shader(RD_shader);									//assign shader to buffer		    
@@ -189,7 +189,7 @@ public class myRDSolver {
 	
 	public void drawShader3D(){
 		PImage res =  drawShaderRes();
-		MC.copyColorAraToData(res.pixels);
+		MC.copyDataAraToMCLclData(res.pixels);
 	}
 	
 	public PImage drawShaderRes(){		  

@@ -417,7 +417,7 @@ public class cs7492Proj3 extends PApplet {
 	public static int GUIObjID = 0;										//counter variable for gui objs
 	
 	public final int grid2D_X=800, grid2D_Y=800;	
-	public final int gridDimX = 450, gridDimY = 450, gridDimZ = 450;				//dimensions of 3d region
+	public final int gridDimX = 500, gridDimY = 500, gridDimZ = 500;				//dimensions of 3d region
 	
 	public final int gridDimX2 = gridDimX/2, gridDimY2 = gridDimY/2, gridDimZ2 = gridDimZ/2;				//dimensions of 3d region
 	//public final int gridDimX = 500, gridDimY = 500, gridDimZ = 500;				//dimensions of 3d region
