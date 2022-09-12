@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.Future;
 
-import cs7492Project3.base_MCCalcThreads;
 import processing.core.PConstants;
 import processing.opengl.*;
 

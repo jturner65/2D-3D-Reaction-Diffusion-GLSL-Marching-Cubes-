@@ -1,14 +1,11 @@
 package cs7492Project3;
 
 import java.awt.event.KeyEvent;
-import java.nio.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import processing.core.*;
-import processing.opengl.PGL;
-import processing.opengl.PGraphics3D;
 /**
  * cs7492 project 3 reaction diffusion
  * 
@@ -273,7 +270,6 @@ public class cs7492Proj3 extends PApplet {
 		return "None";
 	}	
 	public void setFocus(int tar){
-		int idx = tar;
 		focusTar.set(focusVals[(tar+focusVals.length)%focusVals.length]);
 		switch (tar){//special handling for each view
 		case 0 : {initProgram();break;} //refocus camera on center

@@ -2,7 +2,9 @@ package cs7492Project3;
 
 public class myMCCalcThreads extends base_MCCalcThreads {
 	/**
-	 * displacement in info array for current data - use this when putting multiple data fields (like U chem and V chem concentration) in the same primiative value in MC data array, used as mask
+	 * displacement in info array for current data - use this when 
+	 * putting multiple data fields (like U chem and V chem concentration) 
+	 * in the same primitive value in MC data array, used as mask
 	 */
 	public int disp;
 

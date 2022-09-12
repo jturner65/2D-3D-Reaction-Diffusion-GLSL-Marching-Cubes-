@@ -8,13 +8,13 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	private myMCCube[] grid;				//3d grid holding marching cubes
 	
 	public final base_MarchingCubes MC;
-	//idx's in comparison verts
+	//vert idx's for comparison along cube edges
 	public int[][] vIdx = new int[][]{	{0,1},{1,2},{2,3},{3,0},
 										{4,5},{5,6},{6,7},{7,4},
 										{0,4},{1,5},{2,6},{3,7}};
 	// obj data
 	public float isolevel;
-	
+	// precalc powers of 2
 	public static final int[] pow2 = new int[]{1,2,4,8,16,32,64,128,256,512,1024,2048,4096, 8192, 16384, 32768 };
 
 	public int stIdx;

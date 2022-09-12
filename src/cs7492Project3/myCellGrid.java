@@ -1,10 +1,6 @@
 package cs7492Project3;
 
-
-import processing.core.PApplet;
-
 public class myCellGrid {
-	private cs7492Proj3 p;	
 	public myRDSolver rs;
 	public int gridWidth;
 	public int gridHeight;
@@ -20,14 +16,13 @@ public class myCellGrid {
 	// keyModVal + y
 	public final int keyModVal = 1000;
 	
-	public myCellGrid(cs7492Proj3 _p3, myRDSolver _rs, int _width, int _height){
-		p = _p3;
+	public myCellGrid(cs7492Proj3 _p, myRDSolver _rs, int _width, int _height){
 		rs = _rs;
 		gridWidth = _width;
 		gridHeight = _height;
 		gridDepth = 0;				//TODO 3d stuff
 		float[] randVal = new float[rs.seedNum];
-		for (int i = 0; i < rs.seedNum; ++i) {randVal[i] = p.random(gridWidth);}		
+		for (int i = 0; i < rs.seedNum; ++i) {randVal[i] = _p.random(gridWidth);}		
 		cellMap = new myCell[gridHeight][gridWidth];
 		//cellMap = new HashMap<Integer, myCell>();
 		//holds idx 0 of concentration for both chemicals, idx'ed by chem type, x location, y location
@@ -35,7 +30,7 @@ public class myCellGrid {
 		concMapY = new float[2][gridWidth][gridHeight];
 		for (int cellX = 0; cellX < gridWidth; ++cellX) {
 			for (int cellY = 0; cellY < gridHeight; ++cellY) {
-				myCell tmpCell = new myCell(p, rs, cellX, cellY);
+				myCell tmpCell = new myCell(_p, rs, cellX, cellY);
 				if(rs.checkRandAssign(cellX, cellY, randVal)){
 					tmpCell.setConc(rs.chemV, 0, .25f);// * random(.9f,1.1f)); //v
 					tmpCell.setConc(rs.chemU, 0, .5f);// * random(.9f, 1.1f)); //u
