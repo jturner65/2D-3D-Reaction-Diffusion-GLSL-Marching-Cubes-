@@ -2,7 +2,6 @@ package cs7492Project3;
 
 public class myMCCube {
 	public int idx;
-//	private int cubeIDX, ETcubeIDX, araCBIdx;
 	public static int gx = 0,gxgy = 0;
 	private myPointf[] p = new myPointf[] {
 			new myPointf(),
@@ -75,41 +74,12 @@ public class myMCCube {
 	 * 
 	 * @param idx0 index in point array/interpolant array for first point
 	 * @param idx1 index in point array/interpolant array for 2nd point
-	 * @param valPt interpolant representing isosurface
+	 * @param valPt interpolant representing isosurface value, between val[idx1] and val[idx0]
 	 * @return
 	 */
 	public myPointf VertexInterp(int idx0, int idx1, float valPt) {
 		return (new myPointf(p[idx0],((valPt - val[idx0]) / (val[idx1] - val[idx0])),p[idx1]));
 	}
-	
-	
-	
-//	public void setVal(float[] data){
-//		for (int id=0; id<8;++id) {
-//			val[id]=data[dataPIdx[id]];
-//		}
-//	}	
-//	
-//	public void setData(int i, int j, int k, float[] data, myVector datStep){
-//		int j1 = j+1, k1 = k+1, i1 = i+1;
-//		int kgxgy = k*gxgy, jgx = j*gx, jgx1 = j1*gx, k1gxgy = k1 * gxgy;
-//		p[0].set(i * datStep.x, j * datStep.y, k * datStep.z);
-//		p[1].set(i1 * datStep.x,j * datStep.y,k * datStep.z);
-//		p[2].set(i1 * datStep.x,j1 * datStep.y,k * datStep.z);
-//		p[3].set(i * datStep.x, j1 * datStep.y,k * datStep.z);
-//		p[4].set(i * datStep.x,j * datStep.y,k1 * datStep.z);
-//		p[5].set(i1 * datStep.x,j * datStep.y,k1 * datStep.z);
-//		p[6].set(i1 * datStep.x,j1 * datStep.y,k1 * datStep.z);
-//		p[7].set(i * datStep.x,j1 * datStep.y,k1 * datStep.z);
-//
-//		val[0] = data[i  + jgx  + kgxgy];
-//		val[1] = data[i1 + jgx  + kgxgy];
-//		val[2] = data[i1 + jgx1 + kgxgy];
-//		val[3] = data[i  + jgx1 + kgxgy];
-//		val[4] = data[i  + jgx  + k1gxgy];
-//		val[5] = data[i1 + jgx  + k1gxgy];
-//		val[6] = data[i1 + jgx1 + k1gxgy];
-//		val[7] = data[i  + jgx1 + k1gxgy];
-//	}
+
 
 }//class myMCCube

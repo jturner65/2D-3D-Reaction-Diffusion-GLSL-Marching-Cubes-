@@ -3,10 +3,10 @@ package cs7492Project3;
 //class to store vertexes of triangle - will calculate normal based on all triangles that share this vertex
 public class myMCVert{
 	public myPointf loc = new myPointf();
-	public myVectorf n = new myVectorf();			//raw unit normal == actual normal * # tris sharing this vertex
+	public myVectorf n = new myVectorf();
 	public myMCVert(){	}
 		
-	public void setInitVert(myPointf _loc){
+	public void setVertLoc(myPointf _loc){
 		loc.set(_loc);		
 	}
 	

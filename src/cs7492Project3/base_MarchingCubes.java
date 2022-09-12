@@ -31,7 +31,7 @@ public abstract class base_MarchingCubes {
 	public List<Future<Boolean>> callMCCalcFutures;
 	public List<base_MCCalcThreads> callMCCalcs;
 //	//structure to hold mid-edge vertices
-	public ConcurrentSkipListMap<Integer, myMCVert> vertList, usedVertList;
+	public ConcurrentSkipListMap<Integer, myMCVert> usedVertList;
 
 	// draw data
 	public ByteBuffer buf;
@@ -73,7 +73,7 @@ public abstract class base_MarchingCubes {
 					idx++;
 				}
 			}
-			callMCCalcs.add(buildMCCalcThread(stIdx));	//process 2d grid for each thread
+			callMCCalcs.add(buildMCCalcThread(stIdx));	//process 2d grid for each thread, slice in k direction
 		}
 		th_exec.execute(new buildMCData(this, vgx * vgy * vgz));	
 	}//setDimAndRes
@@ -82,9 +82,7 @@ public abstract class base_MarchingCubes {
 	
 	public final void synchSetVertList(int idx, myPointf _loc){
 		synchronized(usedVertList){
-			myMCVert tmp = vertList.get(idx);
-			tmp.setInitVert(_loc);
-			usedVertList.put(idx, tmp);
+			usedVertList.get(idx).setVertLoc(_loc);
 		}
 	}
 	//idxing into 3d grid should be for z -> for y -> for x (inner)

@@ -8,15 +8,13 @@ public class buildMCData implements Runnable{
 	public buildMCData(base_MarchingCubes _mc, int _numVerts){
 		MC = _mc;
 		numVerts = _numVerts;
-		MC.vertList = new ConcurrentSkipListMap<Integer, myMCVert> ();
 		MC.usedVertList = new ConcurrentSkipListMap<Integer, myMCVert> ();
 	}
 	@Override
 	public void run() {
 		for(int idx = 0; idx < numVerts; ++idx){
-			MC.vertList.put(idx, new myMCVert());
-		}
-		
+			MC.usedVertList.put(idx, new myMCVert());
+		}		
 	}
 	
 }//buildMCData
