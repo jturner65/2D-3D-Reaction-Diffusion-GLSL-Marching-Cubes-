@@ -53,11 +53,9 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		if(cubeIDX == -1) {return;}		
 		myPointf[] vertList = new myPointf[16];
 		// Find the vertices where the surface intersects the cube
-		int idx0, idx1;
 		for(int i =0; i<vIdx.length;++i){
 			if ((myMC_Consts.edgeTable[cubeIDX] & pow2[i]) != 0){
-				idx0 = vIdx[i][0];	idx1 = vIdx[i][1];
-				vertList[i] = VertexInterp(gCube.p[idx0], gCube.p[idx1], gCube.val[idx0], gCube.val[idx1], modIsoLvl);
+				vertList[i] = gCube.VertexInterp(vIdx[i][0], vIdx[i][1], modIsoLvl);
 			}
 		}
 		
@@ -85,12 +83,12 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		if(cubeIDX == -1) {return;}		
 		
 		// Find the vertices where the surface intersects the cube
-		int idx0, idx1;
 		for(int i =0; i<vIdx.length;++i){
 			if ((myMC_Consts.edgeTable[cubeIDX] & pow2[i]) != 0){
-				idx0 = vIdx[i][0];	idx1 = vIdx[i][1];
-				MC.synchSetVertList(gCube.vIdx[i], VertexInterp(gCube.p[idx0], gCube.p[idx1], gCube.val[idx0], gCube.val[idx1], modIsoLvl));
-			}}
+				//MC.synchSetVertList(gCube.vIdx[i], VertexInterp(gCube.p[idx0], gCube.p[idx1], gCube.val[idx0], gCube.val[idx1], modIsoLvl));
+				MC.synchSetVertList(gCube.vIdx[i], gCube.VertexInterp(vIdx[i][0], vIdx[i][1], modIsoLvl));
+			} 
+		}
 		// Create the triangle
 		int araIDX = cubeIDX << 4, araIDXpI,gtIDX0, gtIDX1, gtIDX2;
 		//myVectorf _loc = new myVectorf(gridI,  gridJ,  gridK);
@@ -106,13 +104,6 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		}     
 	}//toTriangleVertShade
 
-	/* 
-	 * Linearly interpolate the position where an isosurface cuts an edge between two vertices, each with their own scalar value.
-	 * Bounds check isolevel
-	 */
-	public myVectorf VertexInterp(myVectorf p1, myVectorf p2, float valp1, float valp2, float valPt) {
-		return (new myVectorf(p1,((valPt - valp1) / (valp2 - valp1)),p2));
-	}
 	
 	public void setSimVals(boolean useVerts, float _isoLvl) {
 		isolevel=_isoLvl;
@@ -139,7 +130,7 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		//instead of modifying each data value by shifting, masking and division, can we multiply and shift the iso level - 1 time mult + shift instead of many shift/divs
 		int idx = stIdx;
 		int modIsoLvl = getModIsoLevel();
-		int mask = getDataMask();//0xFF << disp;			//mask is necessary, both u and v results returned simultaneously
+		int mask = getDataMask();//0xFF << disp;			//mask is necessary, both u and v results returned simultaneously, mask filters
 		
 		if(useVertNorms) {
 			for(int j = 0; j < endJ; ++j){

@@ -34,27 +34,24 @@ public abstract class base_MarchingCubes {
 	public ConcurrentSkipListMap<Integer, myMCVert> vertList, usedVertList;
 
 	// draw data
-	public myVectorf dataStep;
 	public ByteBuffer buf;
-	public int cellSize;			//how big are the cells in the resultant grid
 	//holding ara
 	public int[] intData;
 	//executor service to launch threads
 	private ExecutorService th_exec;
 	
 	public base_MarchingCubes(ExecutorService _th_exec, int _cs, int _gx, int _gy, int _gz) {
-		th_exec = _th_exec;
-		
+		th_exec = _th_exec;		
 		callMCCalcs = new ArrayList<base_MCCalcThreads>();
 		callMCCalcFutures = new ArrayList<Future<Boolean>>(); 		
 		setDimAndRes( _cs, _gx, _gy, _gz);
 	}
+	
 	//setup dimensions of resultant space, and dimensions of data array
 	//sx, sy and sz are pixel dimensions,
 	//x,y,z are cell dimensions -> # of grid cells in each dimension
-	public final void setDimAndRes(int _cs, int _x, int _y, int _z) {
-		cellSize = _cs;
-		gx = (int)(_x/cellSize);gy = (int)(_y/cellSize);gz = (int)(_z/cellSize);
+	private final void setDimAndRes(int _cellSize, int _x, int _y, int _z) {
+		gx = (int)(_x/_cellSize);gy = (int)(_y/_cellSize);gz = (int)(_z/_cellSize);
 		gxgy = gx * gy;
 		vgx = (gx*2)-1;
 		vgy = (gy*2)-1;
@@ -62,7 +59,7 @@ public abstract class base_MarchingCubes {
 		numCubes = gx * gy * gz;
 
 		triList = new ArrayList<myMCTri>();		
-		dataStep = new myVectorf(cellSize, cellSize, cellSize);
+		myPointf dataStep = new myPointf(_cellSize, _cellSize, _cellSize);
 		myMCCube.gx = gx;
 		myMCCube.gxgy = gxgy;
 		grid = new myMCCube[numCubes];			//is a global grid faster?
