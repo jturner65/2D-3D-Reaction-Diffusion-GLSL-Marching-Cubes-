@@ -48,8 +48,8 @@ public abstract class base_MarchingCubes {
 	}
 	
 	//setup dimensions of resultant space, and dimensions of data array
-	//sx, sy and sz are pixel dimensions,
-	//x,y,z are cell dimensions -> # of grid cells in each dimension
+	//_x, _y and _z are pixel dimensions,
+	//gx,gy,gz are cell dimensions -> # of grid cells in each dimension
 	private final void setDimAndRes(int _cellSize, int _x, int _y, int _z) {
 		gx = (int)(_x/_cellSize);gy = (int)(_y/_cellSize);gz = (int)(_z/_cellSize);
 		gxgy = gx * gy;
@@ -64,7 +64,7 @@ public abstract class base_MarchingCubes {
 		myMCCube.gxgy = gxgy;
 		grid = new myMCCube[numCubes];			//is a global grid faster?
 		intData = new int[numCubes];
-				
+		//build grid, processing will occur in slices of const k per thread
 		for (int k = 0; k < gz - 1; ++k) {
 			int stIdx = k * gxgy, idx = stIdx;			
 			for (int j = 0; j < gy - 1; ++j) {		
