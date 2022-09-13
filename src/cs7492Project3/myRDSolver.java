@@ -39,9 +39,10 @@ public class myRDSolver {
 	public final int cell2dSize = 4;
 	//3d 
 	public final int cell3dSize = 5;
-	// constant rate of diffusion values for u and v chemicals
-	public final float ru = 0.082f;
-	public final float rv = 0.041f;
+	// constant rate of diffusion values for u and v chemicals 
+	public final float[] ru = new float[] {0.082f, 0.024f, 0.01f};
+	public final float[] rv = new float[] {0.041f, 0.012f, 0.001f};
+	public final int diffIDX = 0;
 
 	public final int seedSize = 10, seedNum = 50;			//seed vals to initialze grid - seedNum is 
 	
@@ -90,7 +91,7 @@ public class myRDSolver {
 		MC = new myMarchingCubes(p, p.th_exec, cell3dSize, p.gridDimX, p.gridDimY, p.gridDimZ);	
 		//p.th_exec.execute(new buildMCData(MC, MC.vgx * MC.vgy * MC.vgz));	
 		glslSolver = new my3DGLSLSolver(p, this, MC, cell3dSize);
-		glslSolver.setRDSimVals(ru, rv, k, f);			
+		glslSolver.setRDSimVals(ru[diffIDX], rv[diffIDX], k, f);			
 		//2d stuff below		
 		init2DCPUStuff();	
 	}
@@ -158,8 +159,8 @@ public class myRDSolver {
 		deltaT = p.guiObjs[p.gIDX_deltaT].valAsFloat();
 		float diffOnly = p.flags[p.useOnlyDiff] ? 1.0f : 0.0f,
 				locMap = p.flags[p.useSpatialParams] ? 1.0f : 0.0f;		
-	    RD_shader.set("ru", ru);
-	    RD_shader.set("rv", rv);
+	    RD_shader.set("ru", ru[diffIDX]);
+	    RD_shader.set("rv", rv[diffIDX]);
 	    RD_shader.set("k", k);
 	    RD_shader.set("f", f);
 	    RD_shader.set("deltaT", deltaT);
@@ -246,7 +247,7 @@ public class myRDSolver {
 	public void setDispChem(int chem){dispChem = chem;}
 	
 	public void setKF(float[] _kf) { k=_kf[0];f=_kf[1]; 
-		glslSolver.setRDSimVals(ru, rv, k, f);
+		glslSolver.setRDSimVals(ru[diffIDX], rv[diffIDX], k, f);
 	}	 
 	public void setStencil(boolean cust){currStencil = (cust ? custStencil : lapStencil);}
 	//tridiag solver for a row -  split out to remove boolean  checks
@@ -369,8 +370,8 @@ public class myRDSolver {
 	}//calcPureImplicit	
 	//set up concentration calculations for imp/ADI calculations
 	public void initConcCalc(){
-		alpha[chemU] = ru * deltaT;// /(cell2dSize);
-		alpha[chemV] = rv * deltaT;// /(cell2dSize);
+		alpha[chemU] = ru[diffIDX] * deltaT;// /(cell2dSize);
+		alpha[chemV] = rv[diffIDX] * deltaT;// /(cell2dSize);
 		for (int chem = 0; chem < 2; ++chem) {
 			lower[chem] = -alpha[chem];// -alpha
 			upper[chem] = -alpha[chem];// -alpha
@@ -389,7 +390,7 @@ public class myRDSolver {
 		if ((!p.flags[p.useADI]) && (!p.flags[p.pureImplicit])) {// calculate diffusion using forward euler - performed in stencil code
 			for (int i = 0; i < cellGrid.gridWidth; ++i) {
 				for (int j = 0; j < cellGrid.gridHeight; ++j) {
-					currStencil.calcValueFETorroid(cellGrid.cellMap[i][j], cellGrid, ru,rv, 1, deltaT);
+					currStencil.calcValueFETorroid(cellGrid.cellMap[i][j], cellGrid, ru[diffIDX],rv[diffIDX], 1, deltaT);
 				}// for each cell across y - j
 			}// for each cell across x - i
 			if (p.flags[p.useOnlyDiff]){updateCellsOnlyDiff(deltaT, 1);} else 
@@ -411,7 +412,7 @@ public class myRDSolver {
 			updateIDX = 1;
 			for (int i = 0; i < cellGrid.gridWidth; ++i) {
 				for (int j = 0; j < cellGrid.gridHeight; ++j) {
-					currStencil.calcValueFENeumann(cellGrid.cellMap[i][j], cellGrid, ru,rv, updateIDX, deltaT); 
+					currStencil.calcValueFENeumann(cellGrid.cellMap[i][j], cellGrid, ru[diffIDX],rv[diffIDX], updateIDX, deltaT); 
 				}// for each cell across y - j
 			}// for each cell across x - i
 			if (p.flags[p.useOnlyDiff]){updateCellsOnlyDiff(deltaT, updateIDX);} else 
