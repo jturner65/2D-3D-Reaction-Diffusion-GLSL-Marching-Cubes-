@@ -218,9 +218,15 @@ public class cs7492Proj3 extends PApplet {
 				break;}				//anything special for pureImplicit	
 			case useNeumann			: {  break;}//anything special for useNeumann			
 			case dispChemU			: { RD.setDispChem((val ? 1 : 0)); break;}
-			case show3D			: { setCamView(); setSolverType(slv2DShdr);if(val){flags[useShader2D]=false;initProgram();
-				RD.glslSolver.init3DMC_RD();
-			} else {	initProgram();}			
+			case show3D			: { 
+				setCamView(); 
+				setSolverType(slv2DShdr);
+				if(val){
+					flags[useShader2D]=false;initProgram();
+					RD.glslSolver.init3DMC_RD();
+				} else {	
+					initProgram();
+				}			
 				break;}
 			case useShader2D		: {
 				if (val) {
