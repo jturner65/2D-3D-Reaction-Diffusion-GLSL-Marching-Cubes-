@@ -12,7 +12,8 @@ public class myMCCube {
 			new myPointf(),
 			new myPointf(),
 			new myPointf()};
-	public int[] dataPIdx = new int[8];		//idx in data corresponding to each point in cube
+	//idx in data corresponding to each vertex in cube
+	public int[] dataPIdx = new int[8];
 	public float[] val = new float[] {0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f};
 	public int[] vIdx;// = new int[12];//1/2 way between corners along edges - 2*dim -1 along each dimension
 
@@ -35,6 +36,7 @@ public class myMCCube {
 		dataPIdx[6] =  i1 + jgx1 + k1gxgy;
 		dataPIdx[7] =  i  + jgx1 + k1gxgy;
 
+		//edge idxs that are shared by adjacent blocks
 		//vertex locations, where we split each grid cube into 8 cubes(i.e. halving each side)
 		//in a pure vertex ara these are the locations of the 12 vertices that
 		//follow this pattern

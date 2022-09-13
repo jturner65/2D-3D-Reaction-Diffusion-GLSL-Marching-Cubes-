@@ -169,7 +169,6 @@ public class cs7492Proj3 extends PApplet {
 	public void resetSolver(boolean useDfltKF){
 		if(useDfltKF){			//if we use defaults, otherwise allow gui modified values
 			RD.initGrid();
-			this.outStr2Scr("In Prog 2a", false);
 			RD.setDispChem(flags[dispChemU] ? 1 : 0);
 			curKFVals[0] = kfVals[currDispType][solverType][0];
 			curKFVals[1] = kfVals[currDispType][solverType][1];

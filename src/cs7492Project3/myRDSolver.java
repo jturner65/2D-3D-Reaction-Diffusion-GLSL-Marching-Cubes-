@@ -27,7 +27,7 @@ public class myRDSolver {
     //public PGraphics shdrBuf3D; 			// Image drawn onto by & re-fed to the shader every loop
     //public PGraphics shdrBuf; 				// Image drawn onto by & re-fed to the shader every loop
 	
-	
+    //2D shader solution
 	public PShader RD_shader;
 
 	public int numShdrIters = 20;
@@ -40,15 +40,15 @@ public class myRDSolver {
 	//3d 
 	public final int cell3dSize = 5;
 	// constant rate of diffusion values for u and v chemicals 
-	public final float[] ru = new float[] {0.082f, 0.024f, 0.01f};
-	public final float[] rv = new float[] {0.041f, 0.012f, 0.001f};
-	public final int diffIDX = 0;
+	private final float[] ru = new float[] {0.082f, 0.112f, 0.024f};
+	private final float[] rv = new float[] {0.041f, 0.061f, 0.012f};
+	private final int diffIDX = 0;
 
 	public final int seedSize = 10, seedNum = 50;			//seed vals to initialze grid - seedNum is 
 	
 	// multipliers for gray-scott equations
-	public float f, k;
-	public float deltaT;
+	private float f, k;
+	private float deltaT;
 	//for 2d grid
 	public int gridWidth, gridHeight;						//width in cells
 	
