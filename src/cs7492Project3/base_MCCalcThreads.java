@@ -9,7 +9,7 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	
 	public final base_MarchingCubes MC;
 	//vert idx's for comparison along cube edges
-	public int[][] vIdx = new int[][]{	{0,1},{1,2},{2,3},{3,0},
+	protected final int[][] edgeVertIDXs = new int[][]{	{0,1},{1,2},{2,3},{3,0},
 										{4,5},{5,6},{6,7},{7,4},
 										{0,4},{1,5},{2,6},{3,7}};
 	// obj data
@@ -51,39 +51,37 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	public void toTriangle(myMCCube gCube, int modIsoLvl) {
 		int cubeIDX = buildCubeIDX(gCube, modIsoLvl);
 		if(cubeIDX == -1) {return;}		
-		myPointf[] vertList = new myPointf[vIdx.length];
+		myPointf[] vertList = new myPointf[edgeVertIDXs.length];
 		// Find the vertices where the surface intersects the cube
-		for(int i =0; i<vIdx.length;++i){
+		for(int i =0; i<edgeVertIDXs.length;++i){
 			if ((myMC_Consts.edgeTable[cubeIDX] & pow2[i]) != 0){
-				vertList[i] = gCube.VertexInterp(vIdx[i][0], vIdx[i][1], modIsoLvl);
+				vertList[i] = gCube.VertexInterp(edgeVertIDXs[i][0], edgeVertIDXs[i][1], modIsoLvl);
 			}
 		}
 		// Create the triangle
 		int araIDX = cubeIDX << 4, araIDXpI;
 		//myVectorf _loc = new myVectorf(gridI,  gridJ,  gridK);
 		myMCTri tmpTri;	
+		//loop through by 3s - each triangle
 		for (int i = 0; myMC_Consts.triAra[araIDX + i] != -1; i += 3) {	
 			araIDXpI = araIDX + i;
-			tmpTri = new myMCTri(new myPointf[]{ vertList[myMC_Consts.triAra[araIDXpI]], vertList[myMC_Consts.triAra[araIDXpI + 1]],	vertList[myMC_Consts.triAra[araIDXpI + 2]]});
+			tmpTri = new myMCTri(new myPointf[]{ 
+							vertList[myMC_Consts.triAra[araIDXpI]], 
+							vertList[myMC_Consts.triAra[araIDXpI + 1]],	
+							vertList[myMC_Consts.triAra[araIDXpI + 2]]});
 			triList.add(tmpTri); 
 		}
 		
 	}//toTriangle
 
-	/*
-	 * Given a grid cell and an isolevel, calculate the facets required to represent the isosurface through the cell. Return the number
-	 * of triangular facets, the lclTris ara will have the verts of =< 5 triangular facets. 0 will be returned if the grid cell
-	 * is either totally above of totally below the isolevel.
-	 * modIsoLvl is iso level made into bit mask
-	 */
 	public void toTriangleVertShade(myMCCube gCube, int modIsoLvl) {
 		int cubeIDX = buildCubeIDX(gCube, modIsoLvl);
 		if(cubeIDX == -1) {return;}		
 		
 		// Find the vertices where the surface intersects the cube
-		for(int i =0; i<vIdx.length;++i){
+		for(int i =0; i<edgeVertIDXs.length;++i){
 			if ((myMC_Consts.edgeTable[cubeIDX] & pow2[i]) != 0){
-				MC.synchSetVertList(gCube.vIdx[i], gCube.VertexInterp(vIdx[i][0], vIdx[i][1], modIsoLvl));
+				MC.synchSetVertList(gCube.vIdx[i], gCube.VertexInterp(edgeVertIDXs[i][0], edgeVertIDXs[i][1], modIsoLvl));
 			} 
 		}
 		// Create the triangle

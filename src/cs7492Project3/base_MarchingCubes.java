@@ -3,10 +3,11 @@ package cs7492Project3;
 import java.nio.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.*;
-import java.util.concurrent.Future;
 
 import processing.core.PConstants;
 import processing.opengl.*;
@@ -65,24 +66,136 @@ public abstract class base_MarchingCubes {
 		grid = new myMCCube[numCubes];			//is a global grid faster?
 		intData = new int[numCubes];
 		//build grid, processing will occur in slices of const k per thread
-		for (int k = 0; k < gz - 1; ++k) {
-			int stIdx = k * gxgy, idx = stIdx;			
-			for (int j = 0; j < gy - 1; ++j) {		
-				for (int i = 0; i < gx - 1; ++i) {									
-					grid[idx] = new myMCCube(i, j, k,  idx, dataStep);					
+		int idx;
+		for (int k = 0; k < gz; ++k) {
+			int stIdx = k * gxgy;
+			idx = stIdx;
+			for (int j = 0; j < gy; ++j) {		
+				for (int i = 0; i < gx; ++i) {									
+					grid[idx] = new myMCCube(i, j, k, idx, dataStep);					
 					idx++;
 				}
 			}
 			callMCCalcs.add(buildMCCalcThread(stIdx));	//process 2d grid for each thread, slice in k direction
 		}
-		th_exec.execute(new buildMCData(this, vgx * vgy * vgz));	
+		usedVertList = new ConcurrentSkipListMap<Integer, myMCVert> ();
+		//th_exec.execute(new buildMCData(this, vgx * vgy * vgz));	
+//		testGrid();
 	}//setDimAndRes
+//	
+//	private void testGrid() {
+//		HashMap<Integer, HashMap<Integer,Integer>> countGridOfVIDX = new HashMap<Integer, HashMap<Integer,Integer>>(); 
+//		int idx = -1;
+//		int gcount = 0;
+//		for (myMCCube cube : grid) {
+//			++idx;
+//			if (cube==null) {
+//				System.out.println("!!! " + (++gcount) +"th Null cube in grid at idx = "+ idx);
+//				continue;
+//			}			
+//			for(int iter=0;iter<cube.vIdx.length;++iter) {
+//				int glblIdx = cube.vIdx[iter];
+//				HashMap<Integer,Integer> glblIdxList = countGridOfVIDX.get(glblIdx);
+//				if (glblIdxList == null) {	
+//					glblIdxList = new HashMap<Integer,Integer>();
+//					countGridOfVIDX.put(glblIdx, glblIdxList);
+//				}
+//				glblIdxList.put(cube.idx, iter);
+//			}
+//		}
+//				
+//		// want a per-count map of per raw idx map to all the internal cube vIdx idxs
+//		HashMap<Integer, HashMap<Integer,HashMap<Integer,Integer>>> counts = new HashMap<Integer, HashMap<Integer,HashMap<Integer,Integer>>>();
+//		System.out.println("vIdx vals with different counts :");
+//		Integer countKey, glblIdxVal;
+//		Integer lclIdxCount;
+//		HashMap<Integer,Integer> perCubeMapOfLclIDX;
+//		Integer cubeIdx, lclCubeIdx;
+//		for(Entry<Integer, HashMap<Integer,Integer>> pair : countGridOfVIDX.entrySet()) {
+//			//finding the number of values referencing this glblIdxVal
+//			glblIdxVal = pair.getKey();
+//			//per cube IDX map of lcl idxs - only one idx per cube
+//			perCubeMapOfLclIDX = pair.getValue();
+//			//# of times glblIdxVal is present across all cubes
+//			countKey = perCubeMapOfLclIDX.size();
+//			
+//			// per count map of per glblIdx 
+//			HashMap<Integer,HashMap<Integer,Integer>> perCountMap = counts.get(countKey);			
+//			if (perCountMap == null) { 
+//				perCountMap = new HashMap<Integer,HashMap<Integer,Integer>>(); 
+//				counts.put(countKey, perCountMap);
+//			}
+//			// per glblIdx map of cubeIDX/lclIDX
+//			HashMap<Integer,Integer> perGlblIdxMap = perCountMap.get(glblIdxVal);
+//			if (perGlblIdxMap == null) { 
+//				perGlblIdxMap = new HashMap<Integer,Integer>(); 
+//				perCountMap.put(glblIdxVal, perGlblIdxMap);
+//			}
+//			// build per lcl index count of counts - see if any lcl idxs error out more often
+//			for (Entry<Integer,Integer> perCubeLclIdx : perCubeMapOfLclIDX.entrySet()) {
+//				cubeIdx = perCubeLclIdx.getKey();
+//				lclCubeIdx = perCubeLclIdx.getValue();
+//				lclIdxCount = perGlblIdxMap.get(lclCubeIdx);
+//				if (lclIdxCount == null) {
+//					lclIdxCount = 0;
+//				}
+//				perGlblIdxMap.put(lclCubeIdx, ++lclIdxCount);	
+//			}			
+//		}
+//		Integer count, glblIdx, lclIdx, lclCount;
+//		HashMap<Integer, HashMap<Integer,Integer>> idxValsMap;
+//		//Key is lcl idx, val is count of that lcl idx across all grids
+//		HashMap<Integer,Integer> countPerLclIdxAtTTLCount = new HashMap<Integer,Integer>();
+//		HashMap<Integer,Integer> lclIdxCountPerGlblIdx;
+//		for(Entry<Integer, HashMap<Integer, HashMap<Integer,Integer>>> countPair : counts.entrySet()) {
+//			count = countPair.getKey();
+//			idxValsMap = countPair.getValue();
+//			System.out.println("Having count of "+ count + " there were "+ idxValsMap.size() +" idxs present.");
+//			//derive map of all local idxs and how many have contribute to count sharing
+//			countPerLclIdxAtTTLCount.clear();
+//			for (Entry<Integer, HashMap<Integer,Integer>> perGlblIDxLclIdxCount : idxValsMap.entrySet()) {
+//				glblIdx = perGlblIDxLclIdxCount.getKey();
+//				lclIdxCountPerGlblIdx = perGlblIDxLclIdxCount.getValue();
+//				//add up the individual lclIdxs' that are present across all glblidxs for this particular count of idxs
+//				for(Entry<Integer,Integer> lclIdxCounts : lclIdxCountPerGlblIdx.entrySet()) {
+//					lclIdx = lclIdxCounts.getKey();
+//					lclCount = lclIdxCounts.getValue();
+//					Integer curCount = countPerLclIdxAtTTLCount.get(lclIdx);
+//					if(curCount == null) {
+//						curCount = 0;
+//					}
+//					curCount += lclCount;
+//					countPerLclIdxAtTTLCount.put(lclIdx,curCount);
+//				}
+//			}
+//			//for each lcl idx, find counts, for the specified count of shares of an idx
+//			for(Entry<Integer,Integer> allLclIdxCounts : countPerLclIdxAtTTLCount.entrySet()) {
+//				lclIdx = allLclIdxCounts.getKey();
+//				lclCount = allLclIdxCounts.getValue();
+//				System.out.println("\tlocal IDX : "+ lclIdx+ " | Counts : " + lclCount);
+//			}
+//		}
+////		Having count of 1 there were 594 idxs present.
+////		Having count of 2 there were 48708 idxs present.
+////		Having count of 3 there were 8 idxs present.
+////		Having count of 4 there were 961276 idxs present.
+////		Having count of 5 there were 586 idxs present.
+////		Having count of 6 there were 66152 idxs present.
+////		Having count of 8 there were 912576 idxs present.
+//			
+//		
+//	}
 	
 	protected abstract base_MCCalcThreads buildMCCalcThread(int stIdx);
 	
 	public final void synchSetVertList(int idx, myPointf _loc){
 		synchronized(usedVertList){
-			usedVertList.get(idx).setVertLoc(_loc);
+			myMCVert tmp = usedVertList.get(idx);
+			if (tmp == null) {
+				tmp = new myMCVert();
+				usedVertList.put(idx, tmp);
+			}
+			tmp.setVertLoc(_loc);
 		}
 	}
 	//idxing into 3d grid should be for z -> for y -> for x (inner)
@@ -103,6 +216,7 @@ public abstract class base_MarchingCubes {
 			c.setSimVals(doUseVertNorms(), getIsoLevel());
 			_setCustomSimValsInCallable(c);
 		}
+		usedVertList.clear();
 		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
 	}
 	
