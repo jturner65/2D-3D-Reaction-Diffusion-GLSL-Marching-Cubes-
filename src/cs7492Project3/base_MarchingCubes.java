@@ -19,7 +19,7 @@ public abstract class base_MarchingCubes {
 
 	public int gx, gy, gz, 
 		vgx, vgy, vgz,
-		numCubes, gxgy, vgxgy;
+		numDataVals, gxgy, vgxgy;
 	
 	public FloatBuffer dataBuf;
 
@@ -36,7 +36,7 @@ public abstract class base_MarchingCubes {
 
 	// draw data
 	public ByteBuffer buf;
-	//holding ara
+	//holding ara from shader
 	public int[] intData;
 	//executor service to launch threads
 	private ExecutorService th_exec;
@@ -54,24 +54,27 @@ public abstract class base_MarchingCubes {
 	private final void setDimAndRes(int _cellSize, int _x, int _y, int _z) {
 		gx = (int)(_x/_cellSize);gy = (int)(_y/_cellSize);gz = (int)(_z/_cellSize);
 		gxgy = gx * gy;
+		int gxm1gym1 = (gx-1) * (gy-1);
 		vgx = (gx*2)-1;
 		vgy = (gy*2)-1;
 		vgz = (gz*2)-1;
-		numCubes = gx * gy * gz;
+		int numCubes = gxm1gym1 * (gz-1);
+		numDataVals = gx * gy * gz;
 
 		triList = new ArrayList<myMCTri>();		
 		myPointf dataStep = new myPointf(_cellSize, _cellSize, _cellSize);
 		myMCCube.gx = gx;
 		myMCCube.gxgy = gxgy;
 		grid = new myMCCube[numCubes];			//is a global grid faster?
-		intData = new int[numCubes];
+		//shader array - needs to be 1 bigger in each dimension than grid
+		intData = new int[numDataVals];
 		//build grid, processing will occur in slices of const k per thread
 		int idx;
-		for (int k = 0; k < gz; ++k) {
-			int stIdx = k * gxgy;
+		for (int k = 0; k < gz-1; ++k) {
+			int stIdx = k * gxm1gym1;
 			idx = stIdx;
-			for (int j = 0; j < gy; ++j) {		
-				for (int i = 0; i < gx; ++i) {									
+			for (int j = 0; j < gy-1; ++j) {		
+				for (int i = 0; i < gx-1; ++i) {									
 					grid[idx] = new myMCCube(i, j, k, idx, dataStep);					
 					idx++;
 				}
@@ -79,30 +82,32 @@ public abstract class base_MarchingCubes {
 			callMCCalcs.add(buildMCCalcThread(stIdx));	//process 2d grid for each thread, slice in k direction
 		}
 		usedVertList = new ConcurrentSkipListMap<Integer, myMCVert> ();
+		System.out.println("Total # of grid cells made :"+grid.length);
 		//th_exec.execute(new buildMCData(this, vgx * vgy * vgz));	
-//		testGrid();
+		testGrid();
 	}//setDimAndRes
-//	
-//	private void testGrid() {
-//		HashMap<Integer, HashMap<Integer,Integer>> countGridOfVIDX = new HashMap<Integer, HashMap<Integer,Integer>>(); 
-//		int idx = -1;
-//		int gcount = 0;
-//		for (myMCCube cube : grid) {
-//			++idx;
-//			if (cube==null) {
-//				System.out.println("!!! " + (++gcount) +"th Null cube in grid at idx = "+ idx);
-//				continue;
-//			}			
-//			for(int iter=0;iter<cube.vIdx.length;++iter) {
-//				int glblIdx = cube.vIdx[iter];
-//				HashMap<Integer,Integer> glblIdxList = countGridOfVIDX.get(glblIdx);
-//				if (glblIdxList == null) {	
-//					glblIdxList = new HashMap<Integer,Integer>();
-//					countGridOfVIDX.put(glblIdx, glblIdxList);
-//				}
-//				glblIdxList.put(cube.idx, iter);
-//			}
-//		}
+	
+	private void testGrid() {
+		HashMap<Integer, HashMap<Integer,Integer>> countGridOfVIDX = new HashMap<Integer, HashMap<Integer,Integer>>(); 
+		int idx = -1;
+		int gcount = 0;
+		for (myMCCube cube : grid) {
+			++idx;
+			//A null cube means we did not build the grid correctly
+			if (cube==null) {
+				System.out.println("!!! " + (++gcount) +"th Null cube in grid at idx = "+ idx);
+				continue;
+			}			
+			for(int iter=0;iter<cube.vIdx.length;++iter) {
+				int glblIdx = cube.vIdx[iter];
+				HashMap<Integer,Integer> glblIdxList = countGridOfVIDX.get(glblIdx);
+				if (glblIdxList == null) {	
+					glblIdxList = new HashMap<Integer,Integer>();
+					countGridOfVIDX.put(glblIdx, glblIdxList);
+				}
+				glblIdxList.put(cube.idx, iter);
+			}
+		}
 //				
 //		// want a per-count map of per raw idx map to all the internal cube vIdx idxs
 //		HashMap<Integer, HashMap<Integer,HashMap<Integer,Integer>>> counts = new HashMap<Integer, HashMap<Integer,HashMap<Integer,Integer>>>();
@@ -183,8 +188,8 @@ public abstract class base_MarchingCubes {
 ////		Having count of 6 there were 66152 idxs present.
 ////		Having count of 8 there were 912576 idxs present.
 //			
-//		
-//	}
+		
+	}
 	
 	protected abstract base_MCCalcThreads buildMCCalcThread(int stIdx);
 	
