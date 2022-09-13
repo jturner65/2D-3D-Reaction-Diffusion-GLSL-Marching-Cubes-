@@ -30,13 +30,7 @@ public class myMarchingCubes extends base_MarchingCubes {
 	}
 	@Override
 	protected void _configureDataForMC(int[] datAra) {
-		int idx = 0, j_kgxgy;
-		//isolevel =  p.flags[p.dispChemU] ?  p.guiObjs[p.gIDX_isoLvl].valAsFloat() : 1.0f - p.guiObjs[p.gIDX_isoLvl].valAsFloat();
-	
-		for (int j = 0; j < gy; ++j){for (int k = 0; k < numCubes; k+=gxgy){j_kgxgy = j + k; for (int i = 0; i < gx; ++i)  {
-			intData[j_kgxgy]= datAra[idx++];
-			j_kgxgy+=gx;
-		}}}	
+		intData = datAra;
 	}
 	@Override
 	protected base_MCCalcThreads buildMCCalcThread(int stIdx) {

@@ -26,7 +26,7 @@ public class my3DGLSLSolver {
 	//PImage tmp;
 
 	// sim values that will be passed to the shader
-	public float ru, rv, k, f;
+	private float ru, rv, k, f;
 	//pass dimensions of cell grid - use 1 pixel in shader image per gridcell
 	public my3DGLSLSolver(cs7492Proj3 _p, myRDSolver _rd, base_MarchingCubes _MC, int _cellSize) {
 		p = _p; cell3dSize = _cellSize;
@@ -48,15 +48,7 @@ public class my3DGLSLSolver {
 //		MC.resCubeIdxImg = new PImage(shdrBufMC.width, shdrBufMC.height);
 //		p.outStr2Scr("my3DGLSLSolver " + pCnt++, false);
 		shdrBuf3D = p.createGraphics(gridPxlW3D, gridPxlH3D, PConstants.P3D); // Image drawn onto by & re-fed to the shader every loop
-		
-		// debug image creation
-//		tmp= p.createImage(gridPxlW3D, gridPxlH3D, p.RGB);
-//		tmp.loadPixels();
-//		for (int i = 0; i < tmp.pixels.length; i++) {
-//			tmp.pixels[i] = 0xff0000FF;
-//		}
-//		tmp.updatePixels();
-		
+			
 		init3DShader(shdrBuf3D, gridPxlW3D, gridPxlH3D);
 	}
 	
@@ -130,11 +122,16 @@ public class my3DGLSLSolver {
 	   //shdrBuf3D.translate(p.mseIn3DBox.x/cell3dSize, p.mseIn3DBox.y/cell3dSize, p.mseIn3DBox.z/cell3dSize);
 	   myPoint pt = p.P(p.c.mseIn3DBox);
 	   pt._div(cell3dSize);
-	   //t++;if(t % 10 == 0){ 		p.outStr2Scr(pt.toStrBrf());  	}
-	   shdrBuf3D.translate((float)(pt.y + (gridX * (int)pt.z)),(float)(pt.x));//, (float)(pt.z));//,
-	   shdrBuf3D.fill(255,255,0,155 );//sets concentration at this location
- 	   	
- 	   //shdrBuf3D.sphere(rad);
+	   // this click location requires the result to be remapped value by value
+//	   float xVal = (float)(pt.y + (gridX * (int)pt.z));
+//	   float yVal = (float)(pt.x);
+	   float xVal = (float)(pt.x + (gridZ * (int)pt.y));
+	   float yVal = (float)(pt.z);
+	   
+	   //t++;if(t % 10 == 0){t=0;p.outStr2Scr(pt.toStrBrf() + " : to ["+ xVal+", "+ yVal+"]");  	}
+	   
+	   shdrBuf3D.translate(xVal,yVal);
+	   shdrBuf3D.fill(255,255,0,255 );//sets concentration at this location
  	   shdrBuf3D.ellipse( 0,0, rad, rad);
 
  	   shdrBuf3D.popMatrix();	    
@@ -143,14 +140,15 @@ public class my3DGLSLSolver {
 
 	public void drawShaderRes(){		  
        	shdrBuf3D.loadPixels();
+       	
 //		uncomment to display shader result as flat image
 //       	p.pushMatrix();
+//       	p.rotate(p.HALF_PI, 1,0,0);
+//       	p.rotate(p.HALF_PI, 0,0,1);
 //       	p.translate(-.5f*gridPxlW3D, 0);
-//       	p.image( shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result from shader as image
-//       	p.translate(0.0f, 2.0f*gridPxlH3D);
-//       	p.image(tmp, 0, 0, gridPxlW3D, gridPxlH3D ); 
-//       	System.out.println("w : " + gridPxlW3D +" | h : " + gridPxlH3D);
-//       	p.popMatrix();
+//       	p.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result from shader as image
+//       	p.popMatrix();       	
+       	
        	MC.copyDataAraToMCLclData(shdrBuf3D.pixels);
 	}
 	
