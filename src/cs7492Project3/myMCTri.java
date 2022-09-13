@@ -28,6 +28,12 @@ public class myMCTri {
 			}
 		}
 	}
+	
+	public void normalizeVertNorms() {
+		for(int i =0; i<3; ++i){
+			verts[i].n._normalize();
+		}
+	}
 
 	public void drawMe(cs7492Proj3 pa){
 		pa.gl_vertex(pt[0]);
@@ -37,7 +43,7 @@ public class myMCTri {
 	//draw via verts with per-vertex normals
 	public void drawMeVerts(cs7492Proj3 pa){
 		for(int i =0; i<3; ++i){
-			pa.gl_normal(verts[i].n._normalize()); 
+			pa.gl_normal(verts[i].n); 
 			pa.gl_vertex(pt[i]);
 		}		
 	}

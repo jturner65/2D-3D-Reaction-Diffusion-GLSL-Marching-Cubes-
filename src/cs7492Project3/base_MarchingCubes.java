@@ -211,18 +211,26 @@ public abstract class base_MarchingCubes {
 	
 	public void copyDataAraToMCLclData(int[] clrPxl){
 		_configureDataForMC(clrPxl);
-		//intData = clrPxl;
-		
-		//int callIdx = 0;
-		
-//		for(myMCVert v : usedVertList.values()){v.clearVert();}
-//		usedVertList.clear();
+		// set all cube values, 1 k-slice per thread
 		for(base_MCCalcThreads c : callMCCalcs) {
 			c.setSimVals(doUseVertNorms(), getIsoLevel());
 			_setCustomSimValsInCallable(c);
+			c.setFunction(0);
+		}
+		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+		// Now build triangles
+		for(base_MCCalcThreads c : callMCCalcs) {
+			c.setFunction(1);
 		}
 		usedVertList.clear();
 		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+		
+		//normalize triangles for vertex shading, and all triangles to MC.triList
+		for(base_MCCalcThreads c : callMCCalcs) {
+			c.setFunction(2);
+		}
+		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+
 	}
 	
 	/**
@@ -239,16 +247,16 @@ public abstract class base_MarchingCubes {
 		setColorBasedOnState();
 		pa.noStroke();
 		pa.beginShape(PConstants.TRIANGLES);		
-		synchronized(triList) {
+		//synchronized(triList) {
 			Iterator<myMCTri> i = triList.iterator(); // Must be in synchronized block		
 	        if (doUseVertNorms()){
 	        	while (i.hasNext()){    	i.next().drawMeVerts(pa);   }
 	        } else {
 	        	while (i.hasNext()){    	i.next().drawMe(pa);   }
 	        }
-		}
+		//}
 		pa.endShape();	
-		triList = new ArrayList<myMCTri>();
+		triList.clear();
 	}
 
 	public String toString() {

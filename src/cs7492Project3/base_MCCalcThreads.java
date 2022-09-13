@@ -5,7 +5,7 @@ import java.util.concurrent.Callable;
 
 
 public abstract class base_MCCalcThreads implements Callable<Boolean> {
-	private myMCCube[] grid;				//3d grid holding marching cubes
+	protected myMCCube[] grid;				//3d grid holding marching cubes
 	
 	public final base_MarchingCubes MC;
 	//vert idx's for comparison along cube edges
@@ -24,7 +24,7 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	/**
 	 * whether or not to use vertex normals for calculation and rendering
 	 */
-	private boolean useVertNorms;
+	protected boolean useVertNorms;
 	
 	public base_MCCalcThreads(base_MarchingCubes _MC, myMCCube[] _grid, int _stIdx, int _gxM1, int _gyM1){
 		MC = _MC;
@@ -121,13 +121,9 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	 * @return
 	 */
 	protected abstract int getDataMask();
-	//protected abstract int 
-	@Override
-	public Boolean call() throws Exception {
-		triList.clear();
-		//instead of modifying each data value by shifting, masking and division, can we multiply and shift the iso level - 1 time mult + shift instead of many shift/divs
+	
+	protected void setCubeVals() {
 		int idx = stIdx;
-		int modIsoLvl = getModIsoLevel();
 		int mask = getDataMask();//0xFF << disp;			//mask is necessary, both u and v results returned simultaneously, mask filters
 		for(int j = 0; j < endJ; ++j){
 			for (int i = 0; i < endI; ++i) {
@@ -135,7 +131,12 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 				++idx;
 			}
 		}
-		idx = stIdx;
+	}//setCubeVals()
+	
+	protected void buildTriangles() {
+		triList.clear();
+		int modIsoLvl = getModIsoLevel();		
+		int idx = stIdx;
 		if(useVertNorms) {
 			for(int j = 0; j < endJ; ++j){
 				for (int i = 0; i < endI; ++i) {
@@ -150,12 +151,42 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 					++idx;
 				}
 			}	
-		}
+		}	
+	}
+	
+	protected void procVertNorms() {
+		//normalize vertex norms if appropriate; Add triangle list to list
+		if(useVertNorms) {
+			for(myMCTri tri : triList) {
+				tri.normalizeVertNorms();
+			}
+		}	
+		
 		
 		synchronized (MC.triList) {
 			MC.triList.addAll(triList);
-		}		
-		return true;
+		}	
+	}
+	
+	protected int func = 0;
+	public void setFunction(int _func) {
+		//func == 0 : set cube values
+		//func == 1 : build triangles
+		//func == 2: process vert norms if appropriate and add triangles to list
+		if ((_func >=0) && (_func <=2)){
+			func = _func;
+		}
+	}	
+	
+	@Override
+	public Boolean call() throws Exception {
+		//instead of modifying each data value by shifting, masking and division, can we multiply and shift the iso level - 1 time mult + shift instead of many shift/divs
+		switch (func) {
+			case 0 : { setCubeVals(); return true;}
+			case 1 : { buildTriangles(); return true;}
+			case 2 : { procVertNorms(); return true;}
+			default : return false;
+		}
 	}//call
 	
 }//class def
