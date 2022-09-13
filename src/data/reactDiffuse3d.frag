@@ -89,7 +89,7 @@ void main(void){
 
 	vec2 UV = texture2D( texture, texCoord ).rg;
 	vec2 lap = vec2( 0.0, 0.0);	
-   // Loop through the neighbouring pixels and compute Laplacian
+   // Loop through the neighboring pixels and compute Laplacian
 
 	for( int i=0; i<STENCIL_SIZE; ++i ){
 		vec2 tmp	= texture2D( texture, texCoord + offset3D[i] ).rg;

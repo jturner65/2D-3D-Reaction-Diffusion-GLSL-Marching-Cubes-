@@ -2,8 +2,6 @@ package cs7492Project3;
 
 import processing.core.*;
 import processing.opengl.*;
-//
-//import java.nio.*;
 
 public class my3DGLSLSolver {
 	public cs7492Proj3 p;
@@ -127,19 +125,19 @@ public class my3DGLSLSolver {
 	//static int t = 0;
 	
 	public void mouseClick3D(){	
-	   	shdrBuf3D.pushMatrix();  	shdrBuf3D.noStroke();
-    	float d = maxRad, rad=d;
-    	//shdrBuf3D.translate(p.mseIn3DBox.x/cell3dSize, p.mseIn3DBox.y/cell3dSize, p.mseIn3DBox.z/cell3dSize);
-    	myPoint pt = p.P(p.c.mseIn3DBox);
-    	pt._div(cell3dSize);
-    	//t++;if(t % 10 == 0){ 		p.outStr2Scr(pt.toStrBrf());  	}
-    	shdrBuf3D.translate((float)(pt.y + (gridX * (int)pt.z)),(float)(pt.x));//, (float)(pt.z));//,
- 	   	shdrBuf3D.fill(255,255,0,155 );//sets concentration at this location
+	   shdrBuf3D.pushMatrix();  	shdrBuf3D.noStroke();
+	   float d = maxRad, rad=d;
+	   //shdrBuf3D.translate(p.mseIn3DBox.x/cell3dSize, p.mseIn3DBox.y/cell3dSize, p.mseIn3DBox.z/cell3dSize);
+	   myPoint pt = p.P(p.c.mseIn3DBox);
+	   pt._div(cell3dSize);
+	   //t++;if(t % 10 == 0){ 		p.outStr2Scr(pt.toStrBrf());  	}
+	   shdrBuf3D.translate((float)(pt.y + (gridX * (int)pt.z)),(float)(pt.x));//, (float)(pt.z));//,
+	   shdrBuf3D.fill(255,255,0,155 );//sets concentration at this location
  	   	
  	   //shdrBuf3D.sphere(rad);
  	   shdrBuf3D.ellipse( 0,0, rad, rad);
 
-	   	shdrBuf3D.popMatrix();	    
+ 	   shdrBuf3D.popMatrix();	    
 	}
 	
 
