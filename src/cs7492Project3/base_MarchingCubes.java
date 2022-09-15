@@ -83,7 +83,6 @@ public abstract class base_MarchingCubes {
 		}
 		usedVertList = new ConcurrentSkipListMap<Integer, myMCVert> ();
 		System.out.println("Total # of grid cells made :"+grid.length);
-		//th_exec.execute(new buildMCData(this, vgx * vgy * vgz));	
 		testGrid();
 	}//setDimAndRes
 	
