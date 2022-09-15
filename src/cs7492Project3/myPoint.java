@@ -74,7 +74,7 @@ public class myPoint {
 	
 	public float[] asFltArray(){return new float[]{(float)x,(float)y,(float)z};}
 	
-	public boolean clickIn(myPoint p, double eps) { return(_dist(p) < eps);}
+	public boolean clickIn(myPoint p, double eps) { return(_SqrDist(p) < (eps *eps));}
 	/**
 	 * returns if this pttor is equal to passed pttor
 	 * @param b myPoint to check
@@ -146,9 +146,9 @@ class myPointf {
 	
 	public float[] asArray(){return new float[]{x,y,z};}
 	
-	public boolean clickIn(myPointf p, float eps) { return(_dist(p) < eps);}
+	public boolean clickIn(myPointf p, float eps) { return(_SqrDist(p) < (eps *eps));}
 	/**
-	 * returns if this pttor is equal to passed pttor
+	 * returns if this point is equal to passed point
 	 * @param b myPointf to check
 	 * @return whether they are equal
 	 */

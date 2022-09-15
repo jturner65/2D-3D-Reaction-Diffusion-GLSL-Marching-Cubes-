@@ -39,27 +39,26 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	}
 	
 	//Determine the index into the edge table which tells us which vertices are inside of the surface
-	private int buildCubeIDX(myMCCube gCube, int modIsoLvl) {
+	private void buildCubeIDX(myMCCube gCube, int modIsoLvl) {
 		int cubeIDX = 0;	
 		for(int i =0; i<gCube.val.length;++i){if(gCube.val[i] < modIsoLvl){	cubeIDX |= pow2[i];}}
 		// Cube is entirely in or out of the surface
-		if ((myMC_Consts.edgeTable[cubeIDX] == 0) || (myMC_Consts.edgeTable[cubeIDX] == 255))  {	return -1;}
-		return cubeIDX;
+		if ((myMC_Consts.edgeTable[cubeIDX] == 0) || (myMC_Consts.edgeTable[cubeIDX] == 255))  {	gCube.cubeIDX = -1;}
+		gCube.cubeIDX = cubeIDX;
 	}
 	
 
-	public void toTriangle(myMCCube gCube, int modIsoLvl) {
-		int cubeIDX = buildCubeIDX(gCube, modIsoLvl);
-		if(cubeIDX == -1) {return;}		
+	private void toTriangle(myMCCube gCube, int modIsoLvl) {
+		if(gCube.cubeIDX == -1) {return;}		
 		myPointf[] vertList = new myPointf[edgeVertIDXs.length];
 		// Find the vertices where the surface intersects the cube
 		for(int i =0; i<edgeVertIDXs.length;++i){
-			if ((myMC_Consts.edgeTable[cubeIDX] & pow2[i]) != 0){
+			if ((myMC_Consts.edgeTable[gCube.cubeIDX] & pow2[i]) != 0){
 				vertList[i] = gCube.VertexInterp(edgeVertIDXs[i][0], edgeVertIDXs[i][1], modIsoLvl);
 			}
 		}
 		// Create the triangle
-		int araIDX = cubeIDX << 4, araIDXpI;
+		int araIDX = gCube.cubeIDX << 4, araIDXpI;
 		//myVectorf _loc = new myVectorf(gridI,  gridJ,  gridK);
 		myMCTri tmpTri;	
 		//loop through by 3s - each triangle
@@ -73,46 +72,60 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		}
 		
 	}//toTriangle
-
-	public void toTriangleVertShade(myMCCube gCube, int modIsoLvl) {
-		int cubeIDX = buildCubeIDX(gCube, modIsoLvl);
-		if(cubeIDX == -1) {return;}		
-		
+	//static int zeroPtCount = 0;
+	
+	private void buildSyncList(myMCCube gCube, int modIsoLvl) {
+		if(gCube.cubeIDX == -1) {return;}				
 		// Find the vertices where the surface intersects the cube
 		for(int i =0; i<edgeVertIDXs.length;++i){
-			if ((myMC_Consts.edgeTable[cubeIDX] & pow2[i]) != 0){
+			if ((myMC_Consts.edgeTable[gCube.cubeIDX] & pow2[i]) != 0){
 				MC.synchSetVertList(gCube.vIdx[i], gCube.VertexInterp(edgeVertIDXs[i][0], edgeVertIDXs[i][1], modIsoLvl));
 			} 
-		}
+		} 
+	}
+	
+	
+	private void toTriangleVertShade(myMCCube gCube, int modIsoLvl) {
+		if(gCube.cubeIDX == -1) {return;}		
+		
+		// Find the vertices where the surface intersects the cube
+//		for(int i =0; i<edgeVertIDXs.length;++i){
+//			if ((myMC_Consts.edgeTable[gCube.cubeIDX] & pow2[i]) != 0){
+//				MC.synchSetVertList(gCube.vIdx[i], gCube.VertexInterp(edgeVertIDXs[i][0], edgeVertIDXs[i][1], modIsoLvl));
+//			} 
+//		} 
 		// Create the triangle
-		int araIDX = cubeIDX << 4, araIDXpI;
+		//shift cube IDX by 4 bits since we use a single array for the triangle edge map
+		int araIDX = gCube.cubeIDX << 4, araIDXpI;
+		
 		//myVectorf _loc = new myVectorf(gridI,  gridJ,  gridK);
 		myMCTri tmpTri;
-		myMCVert v1, v2, v3;
 		for (int i = 0; myMC_Consts.triAra[araIDX + i] != -1; i += 3) {	
 			araIDXpI = araIDX + i;
-			v1 = MC.usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI]]);
-			v2 = MC.usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI + 1]]);
-			v3 = MC.usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI + 2]]);
-			
-			tmpTri = new myMCTri(new myMCVert[]{v1,v2,v3});
-			if (tmpTri.isValid) {
-				triList.add(tmpTri); 
+			myMCVert[] triVertList = MC.synchGetVertList(gCube, araIDXpI);
+			//List is null if any 2 verts are equal
+			if (triVertList != null) {
+				tmpTri = new myMCTri(triVertList);
+				triList.add(tmpTri);
 			}
 		}     
 	}//toTriangleVertShade
 
+//	private String buildDebugStr(myMCCube gCube, myMCVert v, String vertName, int araIDX, boolean showLoc) {
+//		return(showLoc ? v.loc.toStrBrf() : "") + " "+ vertName+": triAra["+araIDX+"]=" +myMC_Consts.triAra[araIDX] +" usedVertList Idx : "+gCube.vIdx[myMC_Consts.triAra[araIDX]];
+//	}
 	
 	public void setSimVals(boolean useVerts, float _isoLvl) {
 		isolevel=_isoLvl;
 		useVertNorms=useVerts;
 	}
 	
-	protected final void setCubeVals(myMCCube cube, int mask) {
+	protected final void setCubeVals(myMCCube cube, int mask, int modIsoLvl) {
 		for (int id=0; id<8;++id) {			//each of 8 verts on grid
-			//grid[idx].val[id]= ((intData[grid[idx].dataPIdx[id]] >> disp & 0xFF));///256.0f);
 			cube.val[id]= (MC.intData[cube.dataPIdx[id]] & mask);
 		}
+		//build and set cube index
+		buildCubeIDX(cube, modIsoLvl);
 	}
 	
 	protected abstract int getModIsoLevel();
@@ -122,16 +135,30 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	 */
 	protected abstract int getDataMask();
 	
-	protected void setCubeVals() {
+	protected void setAllCubeVals() {
 		int idx = stIdx;
+		int modIsoLvl = getModIsoLevel();	
 		int mask = getDataMask();//0xFF << disp;			//mask is necessary, both u and v results returned simultaneously, mask filters
 		for(int j = 0; j < endJ; ++j){
 			for (int i = 0; i < endI; ++i) {
-				setCubeVals(grid[idx], mask);
+				setCubeVals(grid[idx], mask, modIsoLvl);
 				++idx;
 			}
 		}
 	}//setCubeVals()
+	
+	protected void buildSyncVertList() {
+		if(useVertNorms) {
+			int modIsoLvl = getModIsoLevel();		
+			int idx = stIdx;
+			for(int j = 0; j < endJ; ++j){
+				for (int i = 0; i < endI; ++i) {
+					buildSyncList(grid[idx], modIsoLvl);
+					++idx;
+				}
+			}
+		}
+	}
 	
 	protected void buildTriangles() {
 		triList.clear();
@@ -154,15 +181,13 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		}	
 	}
 	
-	protected void procVertNorms() {
+	protected void mergeAllTris() {
 		//normalize vertex norms if appropriate; Add triangle list to list
-		if(useVertNorms) {
-			for(myMCTri tri : triList) {
-				tri.normalizeVertNorms();
-			}
-		}	
-		
-		
+//		if(useVertNorms) {
+//			for(myMCTri tri : triList) {
+//				tri.normalizeVertNorms();
+//			}
+//		}			
 		synchronized (MC.triList) {
 			MC.triList.addAll(triList);
 		}	
@@ -171,9 +196,10 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	protected int func = 0;
 	public void setFunction(int _func) {
 		//func == 0 : set cube values
-		//func == 1 : build triangles
-		//func == 2: process vert norms if appropriate and add triangles to list
-		if ((_func >=0) && (_func <=2)){
+		//func == 1 : build sync list for vert shaded, nothing for face shaded
+		//func == 2 : build triangles
+		//func == 3 : merge triangles to list
+		if ((_func >=0) && (_func <=3)){
 			func = _func;
 		}
 	}	
@@ -182,9 +208,10 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	public Boolean call() throws Exception {
 		//instead of modifying each data value by shifting, masking and division, can we multiply and shift the iso level - 1 time mult + shift instead of many shift/divs
 		switch (func) {
-			case 0 : { setCubeVals(); return true;}
-			case 1 : { buildTriangles(); return true;}
-			case 2 : { procVertNorms(); return true;}
+			case 0 : { setAllCubeVals(); return true;}
+			case 1 : { buildSyncVertList(); return true;}
+			case 2 : { buildTriangles(); return true;}
+			case 3 : { mergeAllTris(); return true;}
 			default : return false;
 		}
 	}//call

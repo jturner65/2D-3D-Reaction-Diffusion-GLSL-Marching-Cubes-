@@ -32,7 +32,7 @@ public abstract class base_MarchingCubes {
 	public List<Future<Boolean>> callMCCalcFutures;
 	public List<base_MCCalcThreads> callMCCalcs;
 //	//structure to hold mid-edge vertices
-	public ConcurrentSkipListMap<Integer, myMCVert> usedVertList;
+	public ConcurrentSkipListMap<Tuple<Integer,Integer>, myMCVert> usedVertList;
 
 	// draw data
 	public ByteBuffer buf;
@@ -81,13 +81,13 @@ public abstract class base_MarchingCubes {
 			}
 			callMCCalcs.add(buildMCCalcThread(stIdx));	//process 2d grid for each thread, slice in k direction
 		}
-		usedVertList = new ConcurrentSkipListMap<Integer, myMCVert> ();
+		usedVertList = new ConcurrentSkipListMap<Tuple<Integer,Integer>, myMCVert> ();
 		System.out.println("Total # of grid cells made :"+grid.length);
 		testGrid();
 	}//setDimAndRes
 	
 	private void testGrid() {
-		HashMap<Integer, HashMap<Integer,Integer>> countGridOfVIDX = new HashMap<Integer, HashMap<Integer,Integer>>(); 
+		HashMap<Tuple<Integer,Integer>, HashMap<Integer,Integer>> countGridOfVIDX = new HashMap<Tuple<Integer,Integer>, HashMap<Integer,Integer>>(); 
 		int idx = -1;
 		int gcount = 0;
 		for (myMCCube cube : grid) {
@@ -98,7 +98,7 @@ public abstract class base_MarchingCubes {
 				continue;
 			}			
 			for(int iter=0;iter<cube.vIdx.length;++iter) {
-				int glblIdx = cube.vIdx[iter];
+				Tuple<Integer,Integer> glblIdx = cube.vIdx[iter];
 				HashMap<Integer,Integer> glblIdxList = countGridOfVIDX.get(glblIdx);
 				if (glblIdxList == null) {	
 					glblIdxList = new HashMap<Integer,Integer>();
@@ -107,15 +107,16 @@ public abstract class base_MarchingCubes {
 				glblIdxList.put(cube.idx, iter);
 			}
 		}
-//				
+				
 //		// want a per-count map of per raw idx map to all the internal cube vIdx idxs
-//		HashMap<Integer, HashMap<Integer,HashMap<Integer,Integer>>> counts = new HashMap<Integer, HashMap<Integer,HashMap<Integer,Integer>>>();
+//		HashMap<Integer, HashMap<Tuple<Integer,Integer>,HashMap<Integer,Integer>>> counts = new HashMap<Integer, HashMap<Tuple<Integer,Integer>,HashMap<Integer,Integer>>>();
 //		System.out.println("vIdx vals with different counts :");
-//		Integer countKey, glblIdxVal;
+//		Integer countKey;
+//		Tuple<Integer,Integer>glblIdxVal;
 //		Integer lclIdxCount;
 //		HashMap<Integer,Integer> perCubeMapOfLclIDX;
 //		Integer cubeIdx, lclCubeIdx;
-//		for(Entry<Integer, HashMap<Integer,Integer>> pair : countGridOfVIDX.entrySet()) {
+//		for(Entry<Tuple<Integer,Integer>, HashMap<Integer,Integer>> pair : countGridOfVIDX.entrySet()) {
 //			//finding the number of values referencing this glblIdxVal
 //			glblIdxVal = pair.getKey();
 //			//per cube IDX map of lcl idxs - only one idx per cube
@@ -124,9 +125,9 @@ public abstract class base_MarchingCubes {
 //			countKey = perCubeMapOfLclIDX.size();
 //			
 //			// per count map of per glblIdx 
-//			HashMap<Integer,HashMap<Integer,Integer>> perCountMap = counts.get(countKey);			
+//			HashMap<Tuple<Integer,Integer>,HashMap<Integer,Integer>> perCountMap = counts.get(countKey);			
 //			if (perCountMap == null) { 
-//				perCountMap = new HashMap<Integer,HashMap<Integer,Integer>>(); 
+//				perCountMap = new HashMap<Tuple<Integer,Integer>,HashMap<Integer,Integer>>(); 
 //				counts.put(countKey, perCountMap);
 //			}
 //			// per glblIdx map of cubeIDX/lclIDX
@@ -146,18 +147,20 @@ public abstract class base_MarchingCubes {
 //				perGlblIdxMap.put(lclCubeIdx, ++lclIdxCount);	
 //			}			
 //		}
-//		Integer count, glblIdx, lclIdx, lclCount;
-//		HashMap<Integer, HashMap<Integer,Integer>> idxValsMap;
+//		Integer count, lclIdx, lclCount;
+//		Tuple<Integer,Integer> glblIdx;
+//		HashMap<Tuple<Integer,Integer>, HashMap<Integer,Integer>> idxValsMap;
 //		//Key is lcl idx, val is count of that lcl idx across all grids
 //		HashMap<Integer,Integer> countPerLclIdxAtTTLCount = new HashMap<Integer,Integer>();
 //		HashMap<Integer,Integer> lclIdxCountPerGlblIdx;
-//		for(Entry<Integer, HashMap<Integer, HashMap<Integer,Integer>>> countPair : counts.entrySet()) {
+//		for(Entry<Integer, HashMap<Tuple<Integer,Integer>, HashMap<Integer,Integer>>> countPair : counts.entrySet()) {
 //			count = countPair.getKey();
+//			//per glbl idx
 //			idxValsMap = countPair.getValue();
-//			System.out.println("Having count of "+ count + " there were "+ idxValsMap.size() +" idxs present.");
+//			System.out.println("Having count of "+ count + " there were "+ idxValsMap.size() +" unique global idxs present.");
 //			//derive map of all local idxs and how many have contribute to count sharing
 //			countPerLclIdxAtTTLCount.clear();
-//			for (Entry<Integer, HashMap<Integer,Integer>> perGlblIDxLclIdxCount : idxValsMap.entrySet()) {
+//			for (Entry<Tuple<Integer,Integer>, HashMap<Integer,Integer>> perGlblIDxLclIdxCount : idxValsMap.entrySet()) {
 //				glblIdx = perGlblIDxLclIdxCount.getKey();
 //				lclIdxCountPerGlblIdx = perGlblIDxLclIdxCount.getValue();
 //				//add up the individual lclIdxs' that are present across all glblidxs for this particular count of idxs
@@ -179,20 +182,20 @@ public abstract class base_MarchingCubes {
 //				System.out.println("\tlocal IDX : "+ lclIdx+ " | Counts : " + lclCount);
 //			}
 //		}
-////		Having count of 1 there were 594 idxs present.
-////		Having count of 2 there were 48708 idxs present.
-////		Having count of 3 there were 8 idxs present.
-////		Having count of 4 there were 961276 idxs present.
-////		Having count of 5 there were 586 idxs present.
-////		Having count of 6 there were 66152 idxs present.
-////		Having count of 8 there were 912576 idxs present.
-//			
+		
+//		Having count of 1 there were 594 idxs present.
+//		Having count of 2 there were 48708 idxs present.
+//		Having count of 3 there were 8 idxs present.
+//		Having count of 4 there were 961276 idxs present.
+//		Having count of 5 there were 586 idxs present.
+//		Having count of 6 there were 66152 idxs present.
+//		Having count of 8 there were 912576 idxs present.
 		
 	}
 	
 	protected abstract base_MCCalcThreads buildMCCalcThread(int stIdx);
 	
-	public final void synchSetVertList(int idx, myPointf _loc){
+	public final void synchSetVertList(Tuple<Integer,Integer> idx, myPointf _loc){
 		synchronized(usedVertList){
 			myMCVert tmp = usedVertList.get(idx);
 			if (tmp == null) {
@@ -200,10 +203,43 @@ public abstract class base_MarchingCubes {
 				usedVertList.put(idx, tmp);
 			}
 			tmp.setVertLoc(_loc);
-		}
+		}//synch
 	}
-	//idxing into 3d grid should be for z -> for y -> for x (inner)
-	public final int IX(int x, int y, int z){return (x + (y * gy) + (z * gxgy));}
+	
+	public final myMCVert[] synchGetVertList(myMCCube gCube, int araIDXpI) {
+		int araIDXpI1 = araIDXpI+1;
+		int araIDXpI2 = araIDXpI+2;
+		myMCVert v1, v2, v3;
+		synchronized(usedVertList) {
+			v1 = usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI]]);
+			v2 = usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI1]]);
+			v3 = usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI2]]);
+			myVectorf n = new myVectorf(v1.loc, v2.loc)._cross(new myVectorf(v1.loc,v3.loc));
+			if(n.sqMagn < .00000001f) {
+//				System.out.println("Tiny norm because : ");
+//				if (v1.loc.equals(v2.loc)) {
+//					System.out.println("\t!!!!v1==v2:"+ buildDebugStr(gCube, v1, "v1",araIDXpI, true) +"|"+ buildDebugStr(gCube, v2, "v2",araIDXpI1, false));
+//				}
+//				if (v2.loc.equals(v3.loc)) {
+//					System.out.println("\t!!!!v2==v3:"+ buildDebugStr(gCube, v2, "v2",araIDXpI1, true) +"|"+ buildDebugStr(gCube, v3, "v3",araIDXpI2, false));
+//				}
+//				if (v3.loc.equals(v1.loc)) {
+//					System.out.println("\t!!!!v3==v1:"+ buildDebugStr(gCube, v3, "v3",araIDXpI2, true) +"|"+ buildDebugStr(gCube, v1, "v1",araIDXpI, false));
+//				}
+//				System.out.println("");
+				return null;
+			} else {				
+				v1.setNorm(n);
+				v2.setNorm(n);
+				v3.setNorm(n);
+				return new myMCVert[] {v1,v2,v3};	
+			}
+		}//synch
+	}
+	
+//	private String buildDebugStr(myMCCube gCube, myMCVert v, String vertName, int araIDX, boolean showLoc) {
+//		return(showLoc ? v.loc.toStrBrf() : "") + " "+ vertName+": triAra["+araIDX+"]=" +myMC_Consts.triAra[araIDX] +" usedVertList Idx : "+gCube.vIdx[myMC_Consts.triAra[araIDX]];
+//	}
 	
 	public abstract boolean doUseVertNorms();	
 	public abstract float getIsoLevel();
@@ -217,16 +253,27 @@ public abstract class base_MarchingCubes {
 			c.setFunction(0);
 		}
 		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
-		// Now build triangles
-		for(base_MCCalcThreads c : callMCCalcs) {
-			c.setFunction(1);
-		}
+		// Now build sync usedVertList list if using vert norms
 		usedVertList.clear();
-		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
-		
-		//normalize triangles for vertex shading, and all triangles to MC.triList
+		if(doUseVertNorms()) {
+			for(base_MCCalcThreads c : callMCCalcs) {
+				c.setFunction(1);
+			}	
+			try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+			for (myMCVert vert : usedVertList.values()) {
+				vert.n._normalize();
+			}
+			//if (usedVertList.size() > 0) {System.out.println("There are "+ usedVertList.size() + " vertices in the surface mesh.");}
+		}
+		// Now, build triangles
 		for(base_MCCalcThreads c : callMCCalcs) {
 			c.setFunction(2);
+		}		
+		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+		
+		//normalize triangles for vertex shading, and add all triangles to MC.triList
+		for(base_MCCalcThreads c : callMCCalcs) {
+			c.setFunction(3);
 		}
 		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
 
