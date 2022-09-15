@@ -2,18 +2,26 @@ package cs7492Project3;
 
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Marching cubes calc implementation for Reaction Diffusion
+ * @author 7strb
+ *
+ */
 public class myMarchingCubes extends base_MarchingCubes {
 	public cs7492Proj3 pa;
 
 	public myMarchingCubes(cs7492Proj3 _p, ExecutorService _th_exec, int _cs, int _gx, int _gy, int _gz) {
 		super(_th_exec, _cs, _gx, _gy, _gz);
 		pa=_p;
-		
 	}
+	
 	@Override
 	public final boolean doUseVertNorms() {
 		return pa.flags[pa.useVertNorms];
 	}
+	/**
+	 * Get desired threshold for Iso surface
+	 */
 	@Override
 	public final float getIsoLevel() {
 		return pa.flags[pa.dispChemU] ?  pa.guiObjs[pa.gIDX_isoLvl].valAsFloat() : 1.0f - pa.guiObjs[pa.gIDX_isoLvl].valAsFloat();
@@ -22,6 +30,11 @@ public class myMarchingCubes extends base_MarchingCubes {
 	@Override
 	protected final void setColorBasedOnState() {
 		pa.setColorValFill(pa.triColors[pa.RD.dispChem][pa.currDispType]);	
+	}
+	@Override
+	protected boolean useFaceValForColor() {
+		//TODO UI should control this value
+		return false;		
 	}
 	@Override
 	protected void _setCustomSimValsInCallable(base_MCCalcThreads c) {

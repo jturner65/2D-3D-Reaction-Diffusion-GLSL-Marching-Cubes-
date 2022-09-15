@@ -32,7 +32,7 @@ public abstract class base_MarchingCubes {
 	public List<Future<Boolean>> callMCCalcFutures;
 	public List<base_MCCalcThreads> callMCCalcs;
 //	//structure to hold mid-edge vertices
-	public ConcurrentSkipListMap<Tuple<Integer,Integer>, myMCVert> usedVertList;
+	public HashMap<Tuple<Integer,Integer>, myMCVert> usedVertList;
 
 	// draw data
 	public ByteBuffer buf;
@@ -81,9 +81,9 @@ public abstract class base_MarchingCubes {
 			}
 			callMCCalcs.add(buildMCCalcThread(stIdx));	//process 2d grid for each thread, slice in k direction
 		}
-		usedVertList = new ConcurrentSkipListMap<Tuple<Integer,Integer>, myMCVert> ();
+		usedVertList = new HashMap<Tuple<Integer,Integer>, myMCVert> ();
 		System.out.println("Total # of grid cells made :"+grid.length);
-		testGrid();
+		//testGrid();
 	}//setDimAndRes
 	
 	private void testGrid() {
@@ -183,18 +183,23 @@ public abstract class base_MarchingCubes {
 //			}
 //		}
 		
-//		Having count of 1 there were 594 idxs present.
-//		Having count of 2 there were 48708 idxs present.
-//		Having count of 3 there were 8 idxs present.
-//		Having count of 4 there were 961276 idxs present.
-//		Having count of 5 there were 586 idxs present.
-//		Having count of 6 there were 66152 idxs present.
-//		Having count of 8 there were 912576 idxs present.
+//		//Having count of 1 there were 594 idxs present.
+//		//Having count of 2 there were 48708 idxs present.
+//		//Having count of 3 there were 8 idxs present.
+//		//Having count of 4 there were 961276 idxs present.
+//		//Having count of 5 there were 586 idxs present.
+//		//Having count of 6 there were 66152 idxs present.
+//		//Having count of 8 there were 912576 idxs present.
 		
 	}
 	
 	protected abstract base_MCCalcThreads buildMCCalcThread(int stIdx);
 	
+	/**
+	 * Set the location of a specific iso surface mesh vert based on interpolation
+	 * @param idx
+	 * @param _loc
+	 */
 	public final void synchSetVertList(Tuple<Integer,Integer> idx, myPointf _loc){
 		synchronized(usedVertList){
 			myMCVert tmp = usedVertList.get(idx);
