@@ -137,18 +137,21 @@ public class my3DGLSLSolver {
  	   shdrBuf3D.popMatrix();	    
 	}
 	
+	private void debugShader() {
+		//uncomment to display shader result as flat image
+	   	p.pushMatrix();
+	   	p.rotate(p.HALF_PI, 1,0,0);
+	   	p.rotate(p.HALF_PI, 0,0,1);
+	   	p.translate(-.5f*gridPxlW3D, 0);
+	   	p.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result from shader as image
+	   	p.popMatrix(); 		
+	}
+	
 
 	public void drawShaderRes(){		  
-       	shdrBuf3D.loadPixels();
-       	
-//		uncomment to display shader result as flat image
-//       	p.pushMatrix();
-//       	p.rotate(p.HALF_PI, 1,0,0);
-//       	p.rotate(p.HALF_PI, 0,0,1);
-//       	p.translate(-.5f*gridPxlW3D, 0);
-//       	p.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result from shader as image
-//       	p.popMatrix();       	
-       	
+       	shdrBuf3D.loadPixels();       	
+		////uncomment to display shader result as flat image
+       	//debugShader();
        	MC.copyDataAraToMCLclData(shdrBuf3D.pixels);
 	}
 	
