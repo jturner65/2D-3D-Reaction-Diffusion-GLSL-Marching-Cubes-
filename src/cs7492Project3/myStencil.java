@@ -6,22 +6,20 @@ package cs7492Project3;
  *
  */
 public class myStencil {
-	public cs7492Proj3 p3;
+	//public cs7492Proj3 p3;
 	public myRDSolver rs;
 	public int width;
 	public int height;
 	public float[][] multAra;
 	//private boolean triDiag;
 	
-	public myStencil(cs7492Proj3 _p, myRDSolver _rs, int _w, int _h){
-		p3 = _p;
+	public myStencil(myRDSolver _rs, int _w, int _h){
 		rs = _rs;
 		width = _w;
 		height = _h;
 		multAra = new float[width][height];
 		//triDiag = false;
 	}//2 element constructor
-	
 
 	/**
 	 * set this stencil with the passed 2-d array

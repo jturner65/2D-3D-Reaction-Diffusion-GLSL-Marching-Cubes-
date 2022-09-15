@@ -214,11 +214,11 @@ public class myRDSolver {
 		// idx of initial concentration to display
 		dispChem = chemU;
 		// set up stencil to use for diffusion calculations
-		lapStencil = new myStencil(p, this, 3, 3);
+		lapStencil = new myStencil(this, 3, 3);
 		lapStencil.setStencil(new float[][]{{ 0, 1, 0 },{ 1, -4, 1 },{ 0, 1, 0 } });
 
 		// set up test stencil to test the stencil layout
-		custStencil = new myStencil(p, this, 3, 3);
+		custStencil = new myStencil(this, 3, 3);
 		custStencil.setStencil(new float[][]{{ .25f, .5f, .25f },{ .5f, -3, .5f },{.25f, .5f, .25f } });
 		currStencil = (p.flags[p.useCustomStencil] ? custStencil : lapStencil);// set current stencil to be the laplacian stencil
 

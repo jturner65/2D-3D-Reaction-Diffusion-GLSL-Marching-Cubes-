@@ -47,7 +47,7 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		gCube.cubeIDX = cubeIDX;
 	}
 	
-
+	//Build triangles for face-shaded surface
 	private void toTriangle(myMCCube gCube, int modIsoLvl) {
 		if(gCube.cubeIDX == -1) {return;}		
 		myPointf[] vertList = new myPointf[edgeVertIDXs.length];
@@ -72,8 +72,8 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		}
 		
 	}//toTriangle
-	//static int zeroPtCount = 0;
 	
+	//Aggregate all surface vertices into single list, so adjacent faces can contribute their normals.
 	private void buildSyncList(myMCCube gCube, int modIsoLvl) {
 		if(gCube.cubeIDX == -1) {return;}				
 		// Find the vertices where the surface intersects the cube
@@ -86,19 +86,10 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	
 	
 	private void toTriangleVertShade(myMCCube gCube, int modIsoLvl) {
-		if(gCube.cubeIDX == -1) {return;}		
-		
-		// Find the vertices where the surface intersects the cube
-//		for(int i =0; i<edgeVertIDXs.length;++i){
-//			if ((myMC_Consts.edgeTable[gCube.cubeIDX] & pow2[i]) != 0){
-//				MC.synchSetVertList(gCube.vIdx[i], gCube.VertexInterp(edgeVertIDXs[i][0], edgeVertIDXs[i][1], modIsoLvl));
-//			} 
-//		} 
+		if(gCube.cubeIDX == -1) {return;}
 		// Create the triangle
 		//shift cube IDX by 4 bits since we use a single array for the triangle edge map
 		int araIDX = gCube.cubeIDX << 4, araIDXpI;
-		
-		//myVectorf _loc = new myVectorf(gridI,  gridJ,  gridK);
 		myMCTri tmpTri;
 		for (int i = 0; myMC_Consts.triAra[araIDX + i] != -1; i += 3) {	
 			araIDXpI = araIDX + i;

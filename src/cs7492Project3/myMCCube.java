@@ -51,7 +51,6 @@ public class myMCCube {
 		p[6].set(i1St,j1St,k1St);
 		p[7].set(iSt,j1St,k1St);
 
-
 		//edge idxs that are shared by adjacent blocks
 		//vertex locations, where we split each grid cube into 8 cubes(i.e. halving each side)
 		//in a pure vertex ara these are the locations of the 12 vertices that
