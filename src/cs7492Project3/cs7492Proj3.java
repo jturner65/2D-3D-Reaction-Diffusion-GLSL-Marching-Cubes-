@@ -827,6 +827,7 @@ public class cs7492Proj3 extends PApplet {
 	    setColorValFill(showInfo ? gui_LightGreen : gui_DarkRed);
 		rect(0,0,10, 10);
 	}
+	public void setFill(int r, int g, int b){fill(r,g,b);}
 	public void setFill(int[] clr, int alpha){fill(clr[0],clr[1],clr[2], alpha);}
 	public void setStroke(int[] clr, int alpha){stroke(clr[0],clr[1],clr[2], alpha);}
 	public void drawSideBarBooleans(){
