@@ -2,10 +2,10 @@ package cs7492Project3;
 
 public class myMCCube {
 	public int idx;
-	//index for cube based on iso
-	public int cubeIDX = -1;
+	//index into triangle array for cube based on iso surface
+	public int edgeAraIDX = -1;
 	public static int gx = 0,gxgy = 0;
-	private myPointf[] p = new myPointf[] {
+	private final myPointf[] p = new myPointf[] {
 			new myPointf(),
 			new myPointf(),
 			new myPointf(),
@@ -15,32 +15,40 @@ public class myMCCube {
 			new myPointf(),
 			new myPointf()};
 	//idx in data corresponding to each vertex in cube
-	public int[] dataPIdx = new int[8];
+	public final int[] dataPIdx = new int[8];
+	// vert idxs for each edge of this cube, as a tuple
+	// For cube, to be consistent and to match adjacent cubes, these should always be sorted (lower IDX, higher IDX)
+	public final Tuple<Integer,Integer>[] edgeGlblVertIDXs;// = new int[12];//1/2 way between corners along edges - 2*dim -1 along each dimension
+	
 	public float[] val = new float[] {0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f};
-	public Tuple<Integer,Integer>[] vIdx;// = new int[12];//1/2 way between corners along edges - 2*dim -1 along each dimension
+	
+	public static final int[][] edgeVertIDXs = new int[][]{	
+		{0,1},{1,2},{2,3},{3,0},
+		{4,5},{5,6},{6,7},{7,4},
+		{0,4},{1,5},{2,6},{3,7}};
 
 	@SuppressWarnings("unchecked")
-	public myMCCube(int i, int j, int k, int _idx, myPointf datStep){
+	public myMCCube(int _i, int _j, int _k, int _idx, myPointf _datStep){
 		idx = _idx;
-		int i1 = i+1, 
-			j1 = j+1, 
-			k1 = k+1; 
-		int	jgx = j*gx, 
+		int i1 = _i+1, 
+			j1 = _j+1, 
+			k1 = _k+1; 
+		int	jgx = _j*gx, 
 			jgx1 = j1*gx;
-		int kgxgy = k*gxgy, 
+		int kgxgy = _k*gxgy, 
 			k1gxgy = k1 * gxgy;
-		dataPIdx[0] =  i  + jgx  + kgxgy;
+		dataPIdx[0] =  _i  + jgx  + kgxgy;
 		dataPIdx[1] =  i1 + jgx  + kgxgy;
 		dataPIdx[2] =  i1 + jgx1 + kgxgy;
-		dataPIdx[3] =  i  + jgx1 + kgxgy;
+		dataPIdx[3] =  _i  + jgx1 + kgxgy;
 		
-		dataPIdx[4] =  i  + jgx  + k1gxgy;
+		dataPIdx[4] =  _i  + jgx  + k1gxgy;
 		dataPIdx[5] =  i1 + jgx  + k1gxgy;
 		dataPIdx[6] =  i1 + jgx1 + k1gxgy;
-		dataPIdx[7] =  i  + jgx1 + k1gxgy;
+		dataPIdx[7] =  _i  + jgx1 + k1gxgy;
 
-		float iSt = i * datStep.x, jSt = j * datStep.y, kSt = k * datStep.z;
-		float i1St = i1 * datStep.x, j1St = j1 * datStep.y, k1St = k1 * datStep.z;
+		float iSt = _i * _datStep.x, jSt = _j * _datStep.y, kSt = _k * _datStep.z;
+		float i1St = i1 * _datStep.x, j1St = j1 * _datStep.y, k1St = k1 * _datStep.z;
 		
 		p[0].set(iSt, jSt, kSt);
 		p[1].set(i1St,jSt,kSt);
@@ -56,22 +64,16 @@ public class myMCCube {
 		//in a pure vertex ara these are the locations of the 12 vertices that
 		//follow the vert-vert pattern for each edge
 		
-		vIdx = new Tuple[] {
-			new Tuple<Integer,Integer>(dataPIdx[0], dataPIdx[1]),
-			new Tuple<Integer,Integer>(dataPIdx[1], dataPIdx[2]),
-			new Tuple<Integer,Integer>(dataPIdx[2], dataPIdx[3]),
-			new Tuple<Integer,Integer>(dataPIdx[3], dataPIdx[0]),
-			new Tuple<Integer,Integer>(dataPIdx[4], dataPIdx[5]),
-			new Tuple<Integer,Integer>(dataPIdx[5], dataPIdx[6]),
-			new Tuple<Integer,Integer>(dataPIdx[6], dataPIdx[7]),
-			new Tuple<Integer,Integer>(dataPIdx[7], dataPIdx[4]),
-			new Tuple<Integer,Integer>(dataPIdx[0], dataPIdx[4]), 
-			new Tuple<Integer,Integer>(dataPIdx[1], dataPIdx[5]), 
-			new Tuple<Integer,Integer>(dataPIdx[2], dataPIdx[6]), 
-			new Tuple<Integer,Integer>(dataPIdx[3], dataPIdx[7])
-		};
-		
+		edgeGlblVertIDXs = new Tuple[12];
+		for(int iter=0; iter < edgeGlblVertIDXs.length;++iter) {
+			int[] lclIdxs = edgeVertIDXs[iter];
+			int valA = dataPIdx[lclIdxs[0]], valB = dataPIdx[lclIdxs[1]];
+			edgeGlblVertIDXs[iter] = (valA > valB) ? 
+				new Tuple<Integer,Integer>(valB, valA) :  
+				new Tuple<Integer,Integer>(valA, valB);			
+		}		
 	}
+	
 	/**
 	 * Linearly interpolate the position where an isosurface cuts an edge between two vertices, each with their own scalar value. Bounds check isolevel
 	 * 
@@ -80,8 +82,8 @@ public class myMCCube {
 	 * @param valPt interpolant representing isosurface value, between val[idx1] and val[idx0]
 	 * @return
 	 */
-	public myPointf VertexInterp(int idx0, int idx1, float valPt) {
-		return (new myPointf(p[idx0],((valPt - val[idx0]) / (val[idx1] - val[idx0])),p[idx1]));
+	public myMCVert VertexInterp(int idx0, int idx1, float valPt) {
+		return (new myMCVert(p[idx0],((valPt - val[idx0]) / (val[idx1] - val[idx0])),p[idx1]));
 	}
 
 

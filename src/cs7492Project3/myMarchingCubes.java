@@ -33,13 +33,11 @@ public class myMarchingCubes extends base_MarchingCubes {
 	}
 	@Override
 	protected boolean useFaceValForColor() {
-		//TODO UI should control this value
-		return false;		
+		return true;		
 	}
 	@Override
 	protected void _setCustomSimValsInCallable(base_MCCalcThreads c) {
-		((myMCCalcThreads)c).setCustomSimVals((pa.flags[pa.dispChemU]) ? 16 : 8);
-		
+		((myMCCalcThreads)c).setCustomSimVals((pa.flags[pa.dispChemU]) ? 16 : 8);		
 	}
 	@Override
 	protected void _configureDataForMC(int[] datAra) {

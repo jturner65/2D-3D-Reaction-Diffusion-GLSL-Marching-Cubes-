@@ -77,14 +77,14 @@ public class cs7492Proj3 extends PApplet {
 	}//draw
 	public void draw3D_show3D(){
 		if(flags[runSim]){	
-			RD.glslSolver.calcConc3dShader();						
+			RD.calcConc3dShader();						
 		}
 		translate((float)focusTar.x,(float)focusTar.y,(float)focusTar.z);				//center of screen		
 		if (cyclModCmp) {	
 			background(bground[0],bground[1],bground[2],bground[3]);	
 			pushMatrix();pushStyle();
 			translate(-gridDimX/2.0f,-gridDimY/2.0f,-gridDimZ/2.0f);				//center of screen		
-			RD.glslSolver.draw();
+			RD.drawShader3D();
 			popStyle();popMatrix();
 			drawAxes(100,3, new myPoint(-viewDimW/2.0f+40,0.0f,0.0f), 200, false); 		//for visualisation purposes and to show movement and location in otherwise empty scene
 		}
@@ -223,7 +223,8 @@ public class cs7492Proj3 extends PApplet {
 				setSolverType(slv2DShdr);
 				if(val){
 					flags[useShader2D]=false;initProgram();
-					RD.glslSolver.init3DMC_RD();
+					//Do not init with 2d shader
+					RD.initShaders(false);
 				} else {	
 					initProgram();
 				}			
@@ -247,7 +248,7 @@ public class cs7492Proj3 extends PApplet {
 			case slvFE : {setSolverFlags(-1);break;}//{flags[useADI]=false;flags[pureImplicit]=false;flags[useShader2D]=false;break;}
 			case slvImp : {setSolverFlags(pureImplicit);break;}//{flags[pureImplicit]=true;flags[useADI]=false;flags[useShader2D]=false;break;}
 			case slvADI : {setSolverFlags(useADI);break;}//{flags[useADI]=true;flags[pureImplicit]=false;flags[useShader2D]=false;break;}
-			case slv2DShdr : {setSolverFlags(useShader2D);RD.initShader(RD.shdrBuf2D, RD.shdrBuf2D.width, RD.shdrBuf2D.height);break;}//{break;}
+			case slv2DShdr : {setSolverFlags(useShader2D);RD.initShaders(true);break;}//{break;}
 		}	
 	}
 	

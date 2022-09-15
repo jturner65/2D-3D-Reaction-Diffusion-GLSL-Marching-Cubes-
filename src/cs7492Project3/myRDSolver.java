@@ -32,8 +32,7 @@ public class myRDSolver {
 
 	public int numShdrIters = 20;
 //	//use the shader for 3d
-	public my3DGLSLSolver glslSolver;
-	public base_MarchingCubes MC;
+	private my3DGLSLSolver glslSolver;
 	
 	// size of cells - 2d
 	public final int cell2dSize = 4;
@@ -42,6 +41,7 @@ public class myRDSolver {
 	// constant rate of diffusion values for u and v chemicals 
 	private final float[] ru = new float[] {0.082f, 0.112f, 0.024f};
 	private final float[] rv = new float[] {0.041f, 0.061f, 0.012f};
+	// default is 0
 	private final int diffIDX = 0;
 
 	public final int seedSize = 10, seedNum = 50;			//seed vals to initialze grid - seedNum is 
@@ -85,26 +85,23 @@ public class myRDSolver {
 		gridPxlW2D = gw; gridPxlH2D = gh;
 		gridWidth = (gw / (cell2dSize));
 		gridHeight = (gh / (cell2dSize));
-		//shader stuff
+		//2D shader stuff
+		shdrBuf2D = p.createGraphics(gridPxlW2D, gridPxlH2D, PConstants.P2D); // Image drawn onto by & re-fed to the shader every loop
+		RD_shader = p.loadShader("ReactDiff2D.frag");
 		initShaders(true);
 		//int pCnt = 1;
-		MC = new myMarchingCubes(p, p.th_exec, cell3dSize, p.gridDimX, p.gridDimY, p.gridDimZ);	
-		//p.th_exec.execute(new buildMCData(MC, MC.vgx * MC.vgy * MC.vgz));	
-		glslSolver = new my3DGLSLSolver(p, this, MC, cell3dSize);
+		glslSolver = new my3DGLSLSolver(p, this, cell3dSize);
 		glslSolver.setRDSimVals(ru[diffIDX], rv[diffIDX], k, f);			
 		//2d stuff below		
 		init2DCPUStuff();	
 	}
 	
 	public void initShaders(boolean is2D){
-		if(is2D){
-			shdrBuf2D = p.createGraphics(gridPxlW2D, gridPxlH2D, PConstants.P2D); // Image drawn onto by & re-fed to the shader every loop
-			RD_shader = p.loadShader("ReactDiff2D.frag");					
+		if(is2D){				
 			initShader(shdrBuf2D, shdrBuf2D.width, shdrBuf2D.height);		
 		} else {
-			
-			
-			
+			//3d			
+			glslSolver.init3DMC_RD();
 		}	
 	}
 	
@@ -186,13 +183,20 @@ public class myRDSolver {
 		PImage res =  drawShaderRes();
 		p.image(res,  0, 0, shdrBuf2D.width, shdrBuf2D.height);
 	}
-
 	
-	public void drawShader3D(){
-		PImage res =  drawShaderRes();
-		MC.copyDataAraToMCLclData(res.pixels);
+	public void drawShader3D() {
+		glslSolver.draw();
+	}
+
+	public void calcConc3dShader() {
+		glslSolver.calcConc3dShader();
 	}
 	
+//	public void drawShader3D(){
+//		PImage res =  drawShaderRes();
+//		MC.copyDataAraToMCLclData(res.pixels);
+//	}
+//	
 	public PImage drawShaderRes(){		  
 	  // Map final image to screen size for display
         if(p.flags[p.dispChemU]){
@@ -357,7 +361,6 @@ public class myRDSolver {
 	 */
 	
 	public void calcPureImplicit(int updateIDX){
-		float calcConc;
 		float[] cNi = new float[2];// old concentration value at x,y
 		for (int x = 0; x < cellGrid.gridWidth; ++x) {
 			for (int y = 0; y < cellGrid.gridHeight; ++y) {

@@ -28,9 +28,9 @@ public class my3DGLSLSolver {
 	// sim values that will be passed to the shader
 	private float ru, rv, k, f;
 	//pass dimensions of cell grid - use 1 pixel in shader image per gridcell
-	public my3DGLSLSolver(cs7492Proj3 _p, myRDSolver _rd, base_MarchingCubes _MC, int _cellSize) {
+	public my3DGLSLSolver(cs7492Proj3 _p, myRDSolver _rd, int _cellSize) {
 		p = _p; cell3dSize = _cellSize;
-		MC = _MC;		
+		MC = new myMarchingCubes(p, p.th_exec, cell3dSize, p.gridDimX, p.gridDimY, p.gridDimZ);		
 		gridX = p.gridDimX/cell3dSize;
 		gridY = p.gridDimY/cell3dSize;
 		gridZ = p.gridDimZ/cell3dSize;
@@ -40,7 +40,7 @@ public class my3DGLSLSolver {
 		maxDiam = maxRad*2 +1;
 		pageSiz = p.gridDimZ;
 		gridDistZ = 1.0f/gridZ;//distance in texture between equivalent points in z direction
-		RD3Dshader = p.loadShader("reactDiffuse3d.frag");	
+		RD3Dshader = p.loadShader("reactDiffuse3d_new.frag");	
 		//MCShader = p.loadShader("marchCube3d.frag");	
 		
 //		shdrBufMC = p.createGraphics(gridPxlW3D, gridPxlH3D, PConstants.P3D);
@@ -80,9 +80,7 @@ public class my3DGLSLSolver {
 		float diffOnly = p.flags[p.useOnlyDiff] ? 1.0f : 0.0f,
 				//dispChemU = p.flags[p.dispChemU] ? 1.0f : 0.0f,
 				//isoLevel =  p.flags[p.dispChemU] ?  p.guiObjs[p.gIDX_isoLvl].valAsFloat() : 1.0f - p.guiObjs[p.gIDX_isoLvl].valAsFloat(),
-				locMap = p.flags[p.useSpatialParams] ? 1.0f : 0.0f;	
-//		RD3Dshader.set("xWidth", gridX);
-//		RD3Dshader.set("yHeight", gridY);
+				locMap = p.flags[p.useSpatialParams] ? 1.0f : 0.0f;
 	    RD3Dshader.set("ru", ru);
 	    RD3Dshader.set("rv", rv);
 	    RD3Dshader.set("k", k);
@@ -90,12 +88,11 @@ public class my3DGLSLSolver {
 	    RD3Dshader.set("distZ", gridDistZ);
 	    RD3Dshader.set("deltaT", deltaT);
 	    RD3Dshader.set("diffOnly", diffOnly);
-	    //RD3Dshader.set("numIters", numShdrIters);
 	    RD3Dshader.set("locMap", locMap);		
 	    shdrBuf3D.textureMode(PConstants.NORMAL);
 		for(int i=0 ; i<numShdrIters ; ++i) {
 			// Set the uniforms of the shader			
-			RD3Dshader.set("texture",  shdrBuf3D );
+			RD3Dshader.set("textureSmplr",  shdrBuf3D );
 			
 		    //RD3Dshader.set("dispChemU", dispChemU);		
 			// Start drawing into the PGraphics object
@@ -137,15 +134,15 @@ public class my3DGLSLSolver {
  	   shdrBuf3D.popMatrix();	    
 	}
 	
-	private void debugShader() {
-		//uncomment to display shader result as flat image
-	   	p.pushMatrix();
-	   	p.rotate(p.HALF_PI, 1,0,0);
-	   	p.rotate(p.HALF_PI, 0,0,1);
-	   	p.translate(-.5f*gridPxlW3D, 0);
-	   	p.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result from shader as image
-	   	p.popMatrix(); 		
-	}
+//	private void debugShader() {
+//		//uncomment to display shader result as flat image
+//	   	p.pushMatrix();
+//	   	p.rotate(p.HALF_PI, 1,0,0);
+//	   	p.rotate(p.HALF_PI, 0,0,1);
+//	   	p.translate(-.5f*gridPxlW3D, 0);
+//	   	p.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result from shader as image
+//	   	p.popMatrix(); 		
+//	}
 	
 
 	public void drawShaderRes(){		  

@@ -1,12 +1,11 @@
 package cs7492Project3;
 
-import java.nio.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
+//import java.util.Map.Entry;
 import java.util.concurrent.*;
 
 import processing.core.PConstants;
@@ -18,25 +17,32 @@ public abstract class base_MarchingCubes {
 	public PShader sh;
 
 	public int gx, gy, gz, 
-		vgx, vgy, vgz,
 		numDataVals, gxgy, vgxgy;
 	
-	public FloatBuffer dataBuf;
-
-	public float minVal, maxVal;
-	
+	/**
+	 * List of triangles making up the iso surface
+	 */
 	public List<myMCTri> triList = Collections.synchronizedList(new ArrayList<myMCTri>());
-
-	protected myMCCube[] grid;				//3d grid holding marching cubes
 	
+	/**
+	 * 3d grid holding marching cubes
+	 */
+	protected myMCCube[] grid;
+	
+	/**
+	 * These hold the Threading callables for used MC Iso surface construction
+	 */
 	public List<Future<Boolean>> callMCCalcFutures;
 	public List<base_MCCalcThreads> callMCCalcs;
-//	//structure to hold mid-edge vertices
-	public HashMap<Tuple<Integer,Integer>, myMCVert> usedVertList;
 
-	// draw data
-	public ByteBuffer buf;
-	//holding ara from shader
+	/**
+	 * structure to hold the per-edge iso surface mesh verts
+	 */
+	private HashMap<Tuple<Integer,Integer>, myMCVert> usedVertList;
+
+	/**
+	 * This holds the data ara from the shader solver
+	 */
 	public int[] intData;
 	//executor service to launch threads
 	private ExecutorService th_exec;
@@ -55,9 +61,6 @@ public abstract class base_MarchingCubes {
 		gx = (int)(_x/_cellSize);gy = (int)(_y/_cellSize);gz = (int)(_z/_cellSize);
 		gxgy = gx * gy;
 		int gxm1gym1 = (gx-1) * (gy-1);
-		vgx = (gx*2)-1;
-		vgy = (gy*2)-1;
-		vgz = (gz*2)-1;
 		int numCubes = gxm1gym1 * (gz-1);
 		numDataVals = gx * gy * gz;
 
@@ -82,6 +85,11 @@ public abstract class base_MarchingCubes {
 			callMCCalcs.add(buildMCCalcThread(stIdx));	//process 2d grid for each thread, slice in k direction
 		}
 		usedVertList = new HashMap<Tuple<Integer,Integer>, myMCVert> ();
+//		for (myMCCube cube : grid) {
+//			for (Tuple<Integer,Integer> edge : cube.vIdx) {
+//				usedVertList.put(edge, new myMCVert());
+//			}
+//		}
 		System.out.println("Total # of grid cells made :"+grid.length);
 		//testGrid();
 	}//setDimAndRes
@@ -97,8 +105,8 @@ public abstract class base_MarchingCubes {
 				System.out.println("!!! " + (++gcount) +"th Null cube in grid at idx = "+ idx);
 				continue;
 			}			
-			for(int iter=0;iter<cube.vIdx.length;++iter) {
-				Tuple<Integer,Integer> glblIdx = cube.vIdx[iter];
+			for(int iter=0;iter<cube.edgeGlblVertIDXs.length;++iter) {
+				Tuple<Integer,Integer> glblIdx = cube.edgeGlblVertIDXs[iter];
 				HashMap<Integer,Integer> glblIdxList = countGridOfVIDX.get(glblIdx);
 				if (glblIdxList == null) {	
 					glblIdxList = new HashMap<Integer,Integer>();
@@ -197,7 +205,7 @@ public abstract class base_MarchingCubes {
 	
 	/**
 	 * Set the location of a specific iso surface mesh vert based on interpolation
-	 * @param idx
+	 * @param idx global edge index, as tuple of vert IDs
 	 * @param _loc
 	 */
 	public final void synchSetVertList(Tuple<Integer,Integer> idx, myPointf _loc){
@@ -207,20 +215,28 @@ public abstract class base_MarchingCubes {
 				tmp = new myMCVert();
 				usedVertList.put(idx, tmp);
 			}
-			tmp.setVertLoc(_loc);
+			tmp.addVertLoc(_loc);
 		}//synch
 	}
 	
+	/**
+	 * Retrieve the vertex list based on the verts specified for the passed myMCCube.  This is to support per-vertex normals
+	 * @param gCube Cube to determine vertices for
+	 * @param araIDXpI initial index in cube's vert-tuple list to query for mesh vert 
+	 * @return array of myMCVerts to be used to create mesh triangle
+	 */
 	public final myMCVert[] synchGetVertList(myMCCube gCube, int araIDXpI) {
 		int araIDXpI1 = araIDXpI+1;
 		int araIDXpI2 = araIDXpI+2;
 		myMCVert v1, v2, v3;
 		synchronized(usedVertList) {
-			v1 = usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI]]);
-			v2 = usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI1]]);
-			v3 = usedVertList.get(gCube.vIdx[myMC_Consts.triAra[araIDXpI2]]);
-			myVectorf n = new myVectorf(v1.loc, v2.loc)._cross(new myVectorf(v1.loc,v3.loc));
+			v1 = usedVertList.get(gCube.edgeGlblVertIDXs[myMC_Consts.triAra[araIDXpI]]);
+			v2 = usedVertList.get(gCube.edgeGlblVertIDXs[myMC_Consts.triAra[araIDXpI1]]);
+			v3 = usedVertList.get(gCube.edgeGlblVertIDXs[myMC_Consts.triAra[araIDXpI2]]);
+			//normal of this triangle is 
+			myVectorf n = new myVectorf(v1, v2)._cross(new myVectorf(v1,v3));
 			if(n.sqMagn < .00000001f) {
+// 				// If this happens, means a degenerate triangle is built from iso surface
 //				System.out.println("Tiny norm because : ");
 //				if (v1.loc.equals(v2.loc)) {
 //					System.out.println("\t!!!!v1==v2:"+ buildDebugStr(gCube, v1, "v1",araIDXpI, true) +"|"+ buildDebugStr(gCube, v2, "v2",araIDXpI1, false));
@@ -233,10 +249,11 @@ public abstract class base_MarchingCubes {
 //				}
 //				System.out.println("");
 				return null;
-			} else {				
-				v1.setNorm(n);
-				v2.setNorm(n);
-				v3.setNorm(n);
+			} else {	
+				//add normal into aggregate norm - will be normalized before display
+				v1.addToNorm(n);
+				v2.addToNorm(n);
+				v3.addToNorm(n);
 				return new myMCVert[] {v1,v2,v3};	
 			}
 		}//synch
@@ -245,13 +262,20 @@ public abstract class base_MarchingCubes {
 //	private String buildDebugStr(myMCCube gCube, myMCVert v, String vertName, int araIDX, boolean showLoc) {
 //		return(showLoc ? v.loc.toStrBrf() : "") + " "+ vertName+": triAra["+araIDX+"]=" +myMC_Consts.triAra[araIDX] +" usedVertList Idx : "+gCube.vIdx[myMC_Consts.triAra[araIDX]];
 //	}
-	
+
+	/**
+	 * Whether to use surface vert or face normals for shading iso surface
+	 */
 	public abstract boolean doUseVertNorms();	
+
+	/**
+	 * Get desired threshold for Iso surface
+	 */
 	public abstract float getIsoLevel();
 	
 	public void copyDataAraToMCLclData(int[] clrPxl){
 		_configureDataForMC(clrPxl);
-		// set all cube values, 1 k-slice per thread
+		// set all cube and surface values, 1 slice in K dir per thread
 		for(base_MCCalcThreads c : callMCCalcs) {
 			c.setSimVals(doUseVertNorms(), getIsoLevel());
 			_setCustomSimValsInCallable(c);
@@ -261,27 +285,28 @@ public abstract class base_MarchingCubes {
 		// Now build sync usedVertList list if using vert norms
 		usedVertList.clear();
 		if(doUseVertNorms()) {
-			for(base_MCCalcThreads c : callMCCalcs) {
-				c.setFunction(1);
-			}	
+			for(base_MCCalcThreads c : callMCCalcs) {				c.setFunction(1);			}	
 			try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+			//find avg location if using vert normals  and set vert color
 			for (myMCVert vert : usedVertList.values()) {
-				vert.n._normalize();
-			}
-			//if (usedVertList.size() > 0) {System.out.println("There are "+ usedVertList.size() + " vertices in the surface mesh.");}
+				vert.calcAvgLoc();
+			}			
 		}
 		// Now, build triangles
-		for(base_MCCalcThreads c : callMCCalcs) {
-			c.setFunction(2);
-		}		
+		for(base_MCCalcThreads c : callMCCalcs) {			c.setFunction(2);		}		
+		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
+		if(doUseVertNorms()) {
+			//normalize all vert normals
+			for (myMCVert vert : usedVertList.values()) {
+				vert.normalize();
+			}
+		}
+		//if (usedVertList.size() > 0) {System.out.println("There are "+ usedVertList.size() + " vertices in the surface mesh.");}
+
+		//normalize triangles for vertex shading, and add all triangles to MC.triList
+		for(base_MCCalcThreads c : callMCCalcs) {			c.setFunction(3);		}
 		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
 		
-		//normalize triangles for vertex shading, and add all triangles to MC.triList
-		for(base_MCCalcThreads c : callMCCalcs) {
-			c.setFunction(3);
-		}
-		try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
-
 	}
 	
 	/**
@@ -291,21 +316,32 @@ public abstract class base_MarchingCubes {
 	protected abstract void _setCustomSimValsInCallable(base_MCCalcThreads c);
 	
 	protected abstract void _configureDataForMC(int[] datAra);
+	/**
+	 * Use some specific state of the iso-surface to set the entire surface's color once per draw
+	 */
 	protected abstract void setColorBasedOnState();
 	
+	protected abstract boolean useFaceValForColor();
 	
+
 	public void draw(cs7492Proj3 pa) {
 		setColorBasedOnState();
 		pa.noStroke();
-		pa.beginShape(PConstants.TRIANGLES);		
-		//synchronized(triList) {
-			Iterator<myMCTri> i = triList.iterator(); // Must be in synchronized block		
+		pa.beginShape(PConstants.TRIANGLES);
+		Iterator<myMCTri> i = triList.iterator(); 
+		if (useFaceValForColor()) {
+	        if (doUseVertNorms()){
+	        	while (i.hasNext()){    	i.next().drawMeVerts_Color(pa);   }
+	        } else {
+	        	while (i.hasNext()){    	i.next().drawMe_Color(pa);   }
+	        }					
+		} else {
 	        if (doUseVertNorms()){
 	        	while (i.hasNext()){    	i.next().drawMeVerts(pa);   }
 	        } else {
 	        	while (i.hasNext()){    	i.next().drawMe(pa);   }
 	        }
-		//}
+		}      
 		pa.endShape();	
 		triList.clear();
 	}
