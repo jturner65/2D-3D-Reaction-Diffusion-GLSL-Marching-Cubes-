@@ -78,9 +78,7 @@ public class my3DGLSLSolver {
 	public void calcConc3dShader(){
 		deltaT = p.guiObjs[p.gIDX_deltaT].valAsFloat();
 		float diffOnly = p.flags[p.useOnlyDiff] ? 1.0f : 0.0f,
-				//dispChemU = p.flags[p.dispChemU] ? 1.0f : 0.0f,
-				//isoLevel =  p.flags[p.dispChemU] ?  p.guiObjs[p.gIDX_isoLvl].valAsFloat() : 1.0f - p.guiObjs[p.gIDX_isoLvl].valAsFloat(),
-				locMap = p.flags[p.useSpatialParams] ? 1.0f : 0.0f;
+			locMap = p.flags[p.useSpatialParams] ? 1.0f : 0.0f;
 	    RD3Dshader.set("ru", ru);
 	    RD3Dshader.set("rv", rv);
 	    RD3Dshader.set("k", k);
@@ -90,24 +88,19 @@ public class my3DGLSLSolver {
 	    RD3Dshader.set("diffOnly", diffOnly);
 	    RD3Dshader.set("locMap", locMap);		
 	    shdrBuf3D.textureMode(PConstants.NORMAL);
-		for(int i=0 ; i<numShdrIters ; ++i) {
+	    shdrBuf3D.textureWrap(PConstants.REPEAT);
+		RD3Dshader.set("textureSmplr",  shdrBuf3D );
+	    for(int i=0 ; i<numShdrIters ; ++i) {
 			// Set the uniforms of the shader			
-			RD3Dshader.set("textureSmplr",  shdrBuf3D );
-			
-		    //RD3Dshader.set("dispChemU", dispChemU);		
 			// Start drawing into the PGraphics object
-			shdrBuf3D.beginDraw();	   
-			shdrBuf3D.textureWrap(PConstants.REPEAT);
-			shdrBuf3D.shader(RD3Dshader);	
-			
-			shdrBuf3D.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D); 	    
-			shdrBuf3D.resetShader();
-		    if(p.flags[p.mouseClicked]) {	    	 mouseClick3D();    }
-		    	    
+			shdrBuf3D.beginDraw();	
+			shdrBuf3D.shader(RD3Dshader);				
+			shdrBuf3D.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D); 	
+			shdrBuf3D.resetShader();		    	    
+		    if(p.flags[p.mouseClicked]) {	    	 mouseClick3D();    }    
 			shdrBuf3D.endDraw();
 		}	
         //resDataImage.copy(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D, 0, 0,  gridPxlW3D, gridPxlH3D);
-
         //resDataImage.loadPixels();
 	}
 		
@@ -124,7 +117,7 @@ public class my3DGLSLSolver {
 //	   float yVal = (float)(pt.x);
 	   float xVal = (float)(pt.x + (gridZ * (int)pt.y));
 	   float yVal = (float)(pt.z);
-	   
+	   //debug
 	   //t++;if(t % 10 == 0){t=0;p.outStr2Scr(pt.toStrBrf() + " : to ["+ xVal+", "+ yVal+"]");  	}
 	   
 	   shdrBuf3D.translate(xVal,yVal);
@@ -143,24 +136,17 @@ public class my3DGLSLSolver {
 //	   	p.image(shdrBuf3D, 0, 0, gridPxlW3D, gridPxlH3D );  // Display result from shader as image
 //	   	p.popMatrix(); 		
 //	}
-	
 
-	public void drawShaderRes(){		  
+	public void draw() {		
+		// Display result
+		p.pushMatrix();p.pushStyle();
        	shdrBuf3D.loadPixels();       	
 		////uncomment to display shader result as flat image
        	//debugShader();
        	MC.copyDataAraToMCLclData(shdrBuf3D.pixels);
-	}
-	
-	public void draw() {		
-//		// Display result
-		p.pushMatrix();p.pushStyle();//set up as row-col 2x array, not as x-y, so  need to swap width and height to y and x
-		//p.translate(-gridPxlW3D*.5f, 0,1);
-		drawShaderRes();
-		p.popStyle();p.popMatrix();			
 		MC.draw(p);
-	}
-	
+		p.popStyle();p.popMatrix();			
+	}	
 }
 
 

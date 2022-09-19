@@ -61,8 +61,6 @@ void main(void){
 	offset3D[21] = vec2(-wmd,0.0);	offset3D[22] = vec2(d, 0.0);	offset3D[23] = vec2(wd, 0.0);
 	offset3D[24] = vec2(-wmd,h);	offset3D[25] = vec2(d, h);		offset3D[26] = vec2(wd, h);
 
-
-	//vec2 UV = texture2D( texture, texCoord ).rg;
 	vec2 UV = texture( textureSmplr, texCoord ).rg;
 	float u	= UV.r;
 	float v	= UV.g;
@@ -70,7 +68,6 @@ void main(void){
 	vec2 lap = vec2( 0.0, 0.0);	
    // Loop through the neighboring pixels and compute Laplacian
 	for( int i=0; i<STENCIL_SIZE; ++i ){
-		//vec2 tmp	= texture2D( texture, texCoord + offset3D[i] ).rg;
 		vec2 tmp	= texture( textureSmplr, texCoord + offset3D[i] ).rg;
 		lap			+= tmp * stencil3D[i];
 	}

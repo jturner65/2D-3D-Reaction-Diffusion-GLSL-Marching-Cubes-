@@ -20,6 +20,7 @@ public class myMCCube {
 	// For cube, to be consistent and to match adjacent cubes, these should always be sorted (lower IDX, higher IDX)
 	public final Tuple<Integer,Integer>[] edgeGlblVertIDXs;// = new int[12];//1/2 way between corners along edges - 2*dim -1 along each dimension
 	
+	//Iso value for this cube
 	public float[] val = new float[] {0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f};
 	
 	public static final int[][] edgeVertIDXs = new int[][]{	

@@ -77,7 +77,7 @@ public class cs7492Proj3 extends PApplet {
 	}//draw
 	public void draw3D_show3D(){
 		if(flags[runSim]){	
-			RD.calcConc3dShader();						
+			RD.calcShader3D();						
 		}
 		translate((float)focusTar.x,(float)focusTar.y,(float)focusTar.z);				//center of screen		
 		if (cyclModCmp) {	

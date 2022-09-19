@@ -51,13 +51,20 @@ public abstract class base_MarchingCubes {
 		th_exec = _th_exec;		
 		callMCCalcs = new ArrayList<base_MCCalcThreads>();
 		callMCCalcFutures = new ArrayList<Future<Boolean>>(); 		
-		setDimAndRes( _cs, _gx, _gy, _gz);
+		setInitDimAndRes( _cs, _gx, _gy, _gz);
 	}
 	
-	//setup dimensions of resultant space, and dimensions of data array
-	//_x, _y and _z are pixel dimensions,
-	//gx,gy,gz are cell dimensions -> # of grid cells in each dimension
-	private final void setDimAndRes(int _cellSize, int _x, int _y, int _z) {
+	/**
+	 * setup dimensions of resultant space, and dimensions of data array
+	 * @param _cellSize per-side pixel dims of MC cube
+	 * @param _x pixel dims of 3D cube grid in x
+	 * @param _y pixel dims of 3D cube grid in y
+	 * @param _z pixel dims of 3D cube grid in z
+	 */
+	private final void setInitDimAndRes(int _cellSize, int _x, int _y, int _z) {
+		//These are the # of computational sites (i.e. texture pixels in frag shader texture)
+		//that receive data.  the # of cubes in the grid is 1 less than this in each dimension -
+		//the cube vertices receive the data
 		gx = (int)(_x/_cellSize);gy = (int)(_y/_cellSize);gz = (int)(_z/_cellSize);
 		gxgy = gx * gy;
 		int gxm1gym1 = (gx-1) * (gy-1);
@@ -274,6 +281,7 @@ public abstract class base_MarchingCubes {
 	public abstract float getIsoLevel();
 	
 	public void copyDataAraToMCLclData(int[] clrPxl){
+		//assigns clrPxl data to intData
 		_configureDataForMC(clrPxl);
 		// set all cube and surface values, 1 slice in K dir per thread
 		for(base_MCCalcThreads c : callMCCalcs) {
@@ -287,7 +295,7 @@ public abstract class base_MarchingCubes {
 		if(doUseVertNorms()) {
 			for(base_MCCalcThreads c : callMCCalcs) {				c.setFunction(1);			}	
 			try {callMCCalcFutures = th_exec.invokeAll(callMCCalcs);for(Future<Boolean> f: callMCCalcFutures) { f.get(); }} catch (Exception e) { e.printStackTrace(); }
-			//find avg location if using vert normals  and set vert color
+			//find avg location if using vert normals and set vert color
 			for (myMCVert vert : usedVertList.values()) {
 				vert.calcAvgLoc();
 			}			

@@ -188,7 +188,7 @@ public class myRDSolver {
 		glslSolver.draw();
 	}
 
-	public void calcConc3dShader() {
+	public void calcShader3D() {
 		glslSolver.calcConc3dShader();
 	}
 	

@@ -129,6 +129,10 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	
 	/**
 	 * Sets the iso surface values of each vertex of the cube based on the data from the shader
+	 * 
+	 * TODO : by setting every cube's verts, this is done nearly 8x more than it should be, since ever non-edge 
+	 * cube vertex is shared by 8 cubes.  Would it improve performance to do this on a per-vertex basis?
+	 * 
 	 * @param cube a component of the MC cube grid
 	 * @param mask Masks the channel to use for the concentration
 	 * @param modIsoLvl threshold for iso surface
@@ -154,7 +158,8 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 	protected void setAllCubeVals() {
 		int idx = stIdx;
 		int modIsoLvl = getModIsoLevel();	
-		int mask = getDataMask();//0xFF << disp;			//mask is necessary, both u and v results returned simultaneously, mask filters
+		//mask is necessary, both u and v results returned simultaneously, mask filters which is processed
+		int mask = getDataMask();//0xFF << disp;			
 		for(int j = 0; j < endJ; ++j){
 			for (int i = 0; i < endI; ++i) {
 				setCubeVals(grid[idx], mask, modIsoLvl);
