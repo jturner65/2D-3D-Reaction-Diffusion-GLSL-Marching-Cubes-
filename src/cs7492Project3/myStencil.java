@@ -6,7 +6,6 @@ package cs7492Project3;
  *
  */
 public class myStencil {
-	//public cs7492Proj3 p3;
 	public myRDSolver rs;
 	public int width;
 	public int height;

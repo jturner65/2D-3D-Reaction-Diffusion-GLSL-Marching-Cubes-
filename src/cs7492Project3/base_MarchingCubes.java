@@ -9,12 +9,8 @@ import java.util.List;
 import java.util.concurrent.*;
 
 import processing.core.PConstants;
-import processing.opengl.*;
 
 public abstract class base_MarchingCubes {
-
-	public PGL pgl;
-	public PShader sh;
 
 	public int gx, gy, gz, 
 		numDataVals, gxgy, vgxgy;
@@ -101,6 +97,7 @@ public abstract class base_MarchingCubes {
 		//testGrid();
 	}//setDimAndRes
 	
+	@SuppressWarnings("unused")
 	private void testGrid() {
 		HashMap<Tuple<Integer,Integer>, HashMap<Integer,Integer>> countGridOfVIDX = new HashMap<Tuple<Integer,Integer>, HashMap<Integer,Integer>>(); 
 		int idx = -1;
@@ -237,9 +234,9 @@ public abstract class base_MarchingCubes {
 		int araIDXpI2 = araIDXpI+2;
 		myMCVert v1, v2, v3;
 		synchronized(usedVertList) {
-			v1 = usedVertList.get(gCube.edgeGlblVertIDXs[myMC_Consts.triAra[araIDXpI]]);
-			v2 = usedVertList.get(gCube.edgeGlblVertIDXs[myMC_Consts.triAra[araIDXpI1]]);
-			v3 = usedVertList.get(gCube.edgeGlblVertIDXs[myMC_Consts.triAra[araIDXpI2]]);
+			v1 = usedVertList.get(gCube.edgeGlblVertIDXs[MC_Consts.triAra[araIDXpI]]);
+			v2 = usedVertList.get(gCube.edgeGlblVertIDXs[MC_Consts.triAra[araIDXpI1]]);
+			v3 = usedVertList.get(gCube.edgeGlblVertIDXs[MC_Consts.triAra[araIDXpI2]]);
 			//normal of this triangle is 
 			myVectorf n = new myVectorf(v1, v2)._cross(new myVectorf(v1,v3));
 			if(n.sqMagn < .00000001f) {
@@ -329,7 +326,7 @@ public abstract class base_MarchingCubes {
 	 */
 	protected abstract void setColorBasedOnState();
 	
-	protected abstract boolean useFaceValForColor();
+	protected abstract boolean useVertLocForColor();
 	
 
 	public void draw(cs7492Proj3 pa) {
@@ -337,7 +334,7 @@ public abstract class base_MarchingCubes {
 		pa.noStroke();
 		pa.beginShape(PConstants.TRIANGLES);
 		Iterator<myMCTri> i = triList.iterator(); 
-		if (useFaceValForColor()) {
+		if (useVertLocForColor()) {
 	        if (doUseVertNorms()){
 	        	while (i.hasNext()){    	i.next().drawMeVerts_Color(pa);   }
 	        } else {

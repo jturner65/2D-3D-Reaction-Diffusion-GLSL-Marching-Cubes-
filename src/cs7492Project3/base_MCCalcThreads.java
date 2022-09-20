@@ -50,7 +50,7 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		int cubeIDX = 0;	
 		for(int i =0; i<gCube.val.length;++i){if(gCube.val[i] < modIsoLvl){	cubeIDX |= pow2[i];}}
 		// Cube is entirely in or out of the surface
-		if ((myMC_Consts.edgeTable[cubeIDX] == 0) || (myMC_Consts.edgeTable[cubeIDX] == 255))  {	gCube.edgeAraIDX = -1;}
+		if ((MC_Consts.edgeTable[cubeIDX] == 0) || (MC_Consts.edgeTable[cubeIDX] == 255))  {	gCube.edgeAraIDX = -1;}
 		gCube.edgeAraIDX = cubeIDX;
 	}
 	
@@ -65,7 +65,7 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		myMCVert[] vertList = new myMCVert[myMCCube.edgeVertIDXs.length];
 		// Find the vertices where the surface intersects the cube
 		for(int i =0; i<myMCCube.edgeVertIDXs.length;++i){
-			if ((myMC_Consts.edgeTable[gCube.edgeAraIDX] & pow2[i]) != 0){
+			if ((MC_Consts.edgeTable[gCube.edgeAraIDX] & pow2[i]) != 0){
 				vertList[i] = gCube.VertexInterp(myMCCube.edgeVertIDXs[i][0], myMCCube.edgeVertIDXs[i][1], modIsoLvl);
 			}
 		}
@@ -73,12 +73,12 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		int araIDX = gCube.edgeAraIDX << 4, araIDXpI;
 		myMCTri tmpTri;	
 		//loop through by 3s - each triangle
-		for (int i = 0; myMC_Consts.triAra[araIDX + i] != -1; i += 3) {	
+		for (int i = 0; MC_Consts.triAra[araIDX + i] != -1; i += 3) {	
 			araIDXpI = araIDX + i;
 			tmpTri = new myMCTri(new myMCVert[]{ 
-							vertList[myMC_Consts.triAra[araIDXpI]], 
-							vertList[myMC_Consts.triAra[araIDXpI + 1]],	
-							vertList[myMC_Consts.triAra[araIDXpI + 2]]});
+							vertList[MC_Consts.triAra[araIDXpI]], 
+							vertList[MC_Consts.triAra[araIDXpI + 1]],	
+							vertList[MC_Consts.triAra[araIDXpI + 2]]});
 			triList.add(tmpTri); 
 		}		
 	}//toTriangle
@@ -92,7 +92,7 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		if(gCube.edgeAraIDX == -1) {return;}				
 		// Find the vertices where the surface intersects the cube
 		for(int i =0; i<myMCCube.edgeVertIDXs.length;++i){
-			if ((myMC_Consts.edgeTable[gCube.edgeAraIDX] & pow2[i]) != 0){
+			if ((MC_Consts.edgeTable[gCube.edgeAraIDX] & pow2[i]) != 0){
 				myMCVert vert = gCube.VertexInterp(myMCCube.edgeVertIDXs[i][0], myMCCube.edgeVertIDXs[i][1], modIsoLvl);
 				MC.synchSetVertList(gCube.edgeGlblVertIDXs[i], vert);
 			} 
@@ -111,7 +111,7 @@ public abstract class base_MCCalcThreads implements Callable<Boolean> {
 		int araIDX = gCube.edgeAraIDX << 4, araIDXpI;
 		myMCTri tmpTri;
 		//loop through by 3s - each triangle
-		for (int i = 0; myMC_Consts.triAra[araIDX + i] != -1; i += 3) {	
+		for (int i = 0; MC_Consts.triAra[araIDX + i] != -1; i += 3) {	
 			araIDXpI = araIDX + i;
 			myMCVert[] triVertList = MC.synchGetVertList(gCube, araIDXpI);
 			//List is null if any 2 verts are equal - degenerate triangle

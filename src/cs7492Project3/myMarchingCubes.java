@@ -32,7 +32,7 @@ public class myMarchingCubes extends base_MarchingCubes {
 		pa.setColorValFill(pa.triColors[pa.RD.dispChem][pa.currDispType]);	
 	}
 	@Override
-	protected boolean useFaceValForColor() {
+	protected boolean useVertLocForColor() {
 		return true;		
 	}
 	@Override

@@ -1,6 +1,5 @@
 package cs7492Project3;
 
-import processing.core.PApplet;
 import processing.core.PConstants;
 
 public class myCell {
@@ -79,7 +78,7 @@ public class myCell {
 		p.noStroke();
 
 		p.translate(offX, offY);
-		p.beginShape(PApplet.QUADS);
+		p.beginShape(PConstants.QUADS);
 		p.vertex(0, 0);
 		p.vertex(0, ySize);
 		p.vertex(xSize, ySize);

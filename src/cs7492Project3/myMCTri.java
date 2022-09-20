@@ -25,7 +25,7 @@ public class myMCTri {
 	//draw with implied face normal
 	public void drawMe_Color(cs7492Proj3 pa){
 		for(int i =0; i<3; ++i){
-			pa.setFill((int)verts[i].clr.x, (int)verts[i].clr.y, (int)verts[i].clr.z);
+			pa.setFill((int)verts[i].clr.x, (int)verts[i].clr.y, (int)verts[i].clr.z, 255);
 			pa.gl_vertex(verts[i]);
 		}	
 	}
@@ -34,7 +34,7 @@ public class myMCTri {
 	public void drawMeVerts_Color(cs7492Proj3 pa){
 		for(int i =0; i<3; ++i){
 			pa.gl_normal(verts[i].n); 
-			pa.setFill((int)verts[i].clr.x, (int)verts[i].clr.y, (int)verts[i].clr.z);
+			pa.setFill((int)verts[i].clr.x, (int)verts[i].clr.y, (int)verts[i].clr.z, 255);
 			pa.gl_vertex(verts[i]);
 		}		
 	}
