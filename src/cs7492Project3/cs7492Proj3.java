@@ -52,8 +52,15 @@ public class cs7492Proj3 extends PApplet {
 	    	PApplet.main(appletArgs);
 	    }
 	 }
+	/**
+	 * max ratio of width to height to use for application window initialization
+	 */
+	public float maxWinRatio =  1.77777778f;
+	
 	public void settings(){
-		size((int)(displayWidth*.95f), (int)(displayHeight*.9f),P3D);
+		float displayRatio = displayWidth/(1.0f*displayHeight);
+		float newWidth = (displayRatio > maxWinRatio) ?  displayWidth * maxWinRatio/displayRatio : displayWidth;
+		size((int)(newWidth*.95f), (int)(displayHeight*.92f),P3D);
 	}
 	
 	public void setup(){
