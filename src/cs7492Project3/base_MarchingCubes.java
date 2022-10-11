@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-//import java.util.Map.Entry;
 import java.util.concurrent.*;
 
 import processing.core.PConstants;
@@ -326,9 +325,12 @@ public abstract class base_MarchingCubes {
 	 */
 	protected abstract void setColorBasedOnState();
 	
-	protected abstract boolean useVertLocForColor();
+	protected abstract boolean useVertLocForColor();	
 	
-
+	/**
+	 * Draw MC resultant mesh
+	 * @param pa
+	 */
 	public void draw(cs7492Proj3 pa) {
 		setColorBasedOnState();
 		pa.noStroke();
