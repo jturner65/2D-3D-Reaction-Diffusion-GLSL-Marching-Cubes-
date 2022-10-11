@@ -109,9 +109,7 @@ public class cs7492Proj3 extends PApplet {
 	
 	public void draw3D_solve2D(){
 		if(flags[runSim]){	
-			if(flags[useShader2D]){RD.calcNewConcShader();}				//shader ignores boundary requests
-			else if(flags[useNeumann]){RD.calcNewConcNeumann();}
-			else{RD.calcNewConcTorroid();}
+			RD.calcNewConc2D(flags[useShader2D], flags[useNeumann]);
 		}
 		translate((float)focusTar.x,(float)focusTar.y,(float)focusTar.z);				//center of screen		
 		if (cyclModCmp) {

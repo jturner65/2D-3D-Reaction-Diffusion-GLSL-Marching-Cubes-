@@ -50,7 +50,7 @@ public class myRDSolver {
 	private float f, k;
 	private float deltaT;
 	//for 2d grid
-	public int gridWidth, gridHeight;						//width in cells
+	private int gridWidth, gridHeight;						//width in cells
 	
 	public int gridPxlW2D, gridPxlH2D;
 	// index of which concentration to display
@@ -68,13 +68,17 @@ public class myRDSolver {
 	public float[][][] concHalfStep; // results of first of 2 steps of ADI
 									 // calculation
 	//tmp values for ADI calcs
-	float[] cNi = new float[2];// old concentration value at x,y
+	protected float[] cNi = new float[2];// old concentration value at x,y
 	
 	// euler calculations in 1D
-	float[] cNi1x, cNim1x, cNip1x,// cni, cni-1, cni+1 for x calc
+	protected float[] cNi1x, cNim1x, cNip1x,// cni, cni-1, cni+1 for x calc
 			cNi1y, cNim1y, cNip1y;// cni, cni-1, cni+1 for y calc
 	//arrays used by tridiag solver
-	float[] multConstX, multConstY, lower, upper, diag0, diag, diagN, alpha;
+	protected float[] multConstX, multConstY, lower, upper, diag0, diag, diagN, alpha;
+	//Precalculate spatial K and F params
+	protected float[] spatialK;
+	protected float[] spatialF;
+	
 
 	public myRDSolver(cs7492Proj3 _p, int gw, int gh) {
 		p=_p;
@@ -85,6 +89,13 @@ public class myRDSolver {
 		gridPxlW2D = gw; gridPxlH2D = gh;
 		gridWidth = (gw / (cell2dSize));
 		gridHeight = (gh / (cell2dSize));
+		
+		//initialize spatial F and K parameters
+		spatialK = new float[gridWidth];
+		spatialF = new float[gridHeight];
+		for (int i = 0; i < gridWidth; ++i) {spatialK[i] = PApplet.map(i, 0,gridWidth, p.minKSpatial, p.maxKSpatial);}
+		for (int j = 0; j < gridHeight; ++j) {spatialF[j] = PApplet.map(j,gridHeight, 0, p.minFSpatial, p.maxFSpatial);}
+		
 		//2D shader stuff
 		shdrBuf2D = p.createGraphics(gridPxlW2D, gridPxlH2D, PConstants.P2D); // Image drawn onto by & re-fed to the shader every loop
 		RD_shader = p.loadShader("ReactDiff2D.frag");
@@ -142,16 +153,23 @@ public class myRDSolver {
 	    	shdrBuf2D.noStroke();
 	    	shdrBuf2D.translate((float)msClk.x, (float)msClk.y);
 	    	shdrBuf2D.fill(0,255,0,255 );
-	    	shdrBuf2D.rotate(p.drawCount*10 *p.DEG_TO_RAD);
+	    	shdrBuf2D.rotate(p.drawCount*10 *PConstants.DEG_TO_RAD);
 	    	shdrBuf2D.ellipse( 0,0, 5* ((p.drawCount+4)%8), 5* (p.drawCount%24));
 	    	shdrBuf2D.fill(255,0,0,255 );
-	    	shdrBuf2D.rotate(-p.drawCount*20 *p.DEG_TO_RAD);
+	    	shdrBuf2D.rotate(-p.drawCount*20 *PConstants.DEG_TO_RAD);
 	    	shdrBuf2D.ellipse(0, 0, 5* (p.drawCount%8), 5* ((p.drawCount+12)%24));
 	    	shdrBuf2D.popStyle();
 		    }	
 	}// mseClick2D()	
+	
+	public void calcNewConc2D(boolean useShader2D, boolean useNeumann) {		
+		if(useShader2D){calcNewConcShader();}				//shader ignores boundary requests
+		else if(useNeumann){calcNewConcNeumann();}
+		else{calcNewConcTorroid();}
+	}
+	
 	//perform calculations for shader
-	public void calcNewConcShader(){
+	private void calcNewConcShader(){
 		//int fillVal = (int)p.random(100)+155;
 		deltaT = p.guiObjs[p.gIDX_deltaT].valAsFloat();
 		float diffOnly = p.flags[p.useOnlyDiff] ? 1.0f : 0.0f,
@@ -201,13 +219,13 @@ public class myRDSolver {
 	  // Map final image to screen size for display
         if(p.flags[p.dispChemU]){
 			resImageU.copy( shdrBuf2D, 0, 0, shdrBuf2D.width, shdrBuf2D.height, 0, 0,  shdrBuf2D.width, shdrBuf2D.height );
-			resImageU.blend(greenMask, 0, 0,  shdrBuf2D.width, shdrBuf2D.height ,0, 0,  shdrBuf2D.width, shdrBuf2D.height, p.EXCLUSION );
-			resImageU.filter(p.GRAY);
+			resImageU.blend(greenMask, 0, 0,  shdrBuf2D.width, shdrBuf2D.height ,0, 0,  shdrBuf2D.width, shdrBuf2D.height, PConstants.EXCLUSION );
+			resImageU.filter(PConstants.GRAY);
 			return resImageU;
 		} else {
 			resImageV.copy(shdrBuf2D, 0, 0, shdrBuf2D.width, shdrBuf2D.height, 0, 0,  shdrBuf2D.width, shdrBuf2D.height );
-			resImageV.blend(redMask, 0, 0,  shdrBuf2D.width, shdrBuf2D.height ,0, 0,  shdrBuf2D.width, shdrBuf2D.height, p.EXCLUSION);
-			resImageV.filter(p.GRAY);
+			resImageV.blend(redMask, 0, 0,  shdrBuf2D.width, shdrBuf2D.height ,0, 0,  shdrBuf2D.width, shdrBuf2D.height, PConstants.EXCLUSION);
+			resImageV.filter(PConstants.GRAY);
 			return resImageV;
 		}
 	}
@@ -255,7 +273,7 @@ public class myRDSolver {
 	}	 
 	public void setStencil(boolean cust){currStencil = (cust ? custStencil : lapStencil);}
 	//tridiag solver for a row -  split out to remove boolean  checks
-	public void triDiagRow(float lower, float diag0, float diag, float diagN, float upper, int curX, int curY, int num, int chem,float[] cNp1) {
+	private void triDiagRow(float lower, float diag0, float diag, float diagN, float upper, int curX, int curY, int num, int chem,float[] cNp1) {
 		float beta;
 		float[] gamma = new float[num];
 		int lIdx = num-1;
@@ -282,7 +300,7 @@ public class myRDSolver {
 		}// if diag not 0
 	}// triDiagRow solver
 	//tridiag solver for a col - split out to remove boolean  checks
-	public void triDiagCol(float lower, float diag0, float diag, float diagN, float upper, int curX, int curY, int num, int chem,float[] cNp1) {
+	private void triDiagCol(float lower, float diag0, float diag, float diagN, float upper, int curX, int curY, int num, int chem,float[] cNp1) {
 		float beta;
 		float[] gamma = new float[num];
 		int lIdx = num-1;
@@ -388,7 +406,7 @@ public class myRDSolver {
 	}//initConcCalc
 	
 	 //this function will calculate the new concentrations of the two chemicals for each cell
-	public void calcNewConcTorroid() {
+	private void calcNewConcTorroid() {
 		deltaT = p.guiObjs[p.gIDX_deltaT].valAsFloat();
 		if ((!p.flags[p.useADI]) && (!p.flags[p.pureImplicit])) {// calculate diffusion using forward euler - performed in stencil code
 			for (int i = 0; i < cellGrid.gridWidth; ++i) {
@@ -406,7 +424,7 @@ public class myRDSolver {
 	}// calcNewConcentration
 	
 	 //this function will calculate the new concentrations of the two chemicals for each cell
-	public void calcNewConcNeumann() {
+	private void calcNewConcNeumann() {
 		deltaT = p.guiObjs[p.gIDX_deltaT].valAsFloat();
 		// index of concentrations to use to update to idx 0 upon update step
 		int updateIDX = 1;
@@ -474,36 +492,69 @@ public class myRDSolver {
 	//2 functions to so to not have boolean check every iteration for every cell minKSpatial =  0.03f,  maxKSpatial =0.07f, minFSpatial =  0,  maxFSpatial = 0.08f;
 	public void updateCellsImp( float deltaT, int updateIDX){
 		float local_f, local_k;
-		for (int i = 0; i < cellGrid.gridWidth; ++i) {
-			local_k = ((p.flags[p.useSpatialParams]) ? (p.map(i, 0,cellGrid.gridWidth, p.minKSpatial, p.maxKSpatial)) : (k));			
-			for (int j = 0; j < cellGrid.gridHeight; ++j) {
-				local_f = ((p.flags[p.useSpatialParams]) ? (p.map(j,cellGrid.gridHeight, 0, p.minFSpatial, p.maxFSpatial)) : (f));
-				cellGrid.cellMap[i][j].calcReactive(local_f, local_k, deltaT, updateIDX);
-				cellGrid.updateConcAtCellIMP(i, j, updateIDX);
-				glMaxConc[chemU] = Math.max(glMaxConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
-				glMaxConc[chemV] = Math.max(glMaxConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
-				glMinConc[chemU] = Math.min(glMinConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
-				glMinConc[chemV] = Math.min(glMinConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
-			}// for j
-		}// for i		
-		
-	}
+		if (p.flags[p.useSpatialParams]) {
+			//spatially varying k and f
+			for (int i = 0; i < cellGrid.gridWidth; ++i) {
+				local_k = spatialK[i];
+				for (int j = 0; j < cellGrid.gridHeight; ++j) {
+					local_f = spatialF[i];
+					cellGrid.cellMap[i][j].calcReactive(local_f, local_k, deltaT, updateIDX);
+					cellGrid.updateConcAtCellIMP(i, j, updateIDX);
+					glMaxConc[chemU] = Math.max(glMaxConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
+					glMaxConc[chemV] = Math.max(glMaxConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
+					glMinConc[chemU] = Math.min(glMinConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
+					glMinConc[chemV] = Math.min(glMinConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
+				}// for j
+			}// for i	
+		} else {
+			//constant k and f
+			local_k = k;
+			local_f = f;
+			for (int i = 0; i < cellGrid.gridWidth; ++i) {
+				for (int j = 0; j < cellGrid.gridHeight; ++j) {
+					cellGrid.cellMap[i][j].calcReactive(local_f, local_k, deltaT, updateIDX);
+					cellGrid.updateConcAtCellIMP(i, j, updateIDX);
+					glMaxConc[chemU] = Math.max(glMaxConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
+					glMaxConc[chemV] = Math.max(glMaxConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
+					glMinConc[chemU] = Math.min(glMinConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
+					glMinConc[chemV] = Math.min(glMinConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
+				}// for j
+			}// for i				
+		}	
+	}//updateCellsImp
 	
 	public void updateCells(float deltaT, int updateIDX){
 		float local_f, local_k;
-		for (int i = 0; i < cellGrid.gridWidth; ++i) {
-			local_k = ((p.flags[p.useSpatialParams]) ? (p.map(i, 0,cellGrid.gridWidth, p.minKSpatial, p.maxKSpatial)) : (k));
-			for (int j = 0; j < cellGrid.gridHeight; ++j) {
-				local_f = ((p.flags[p.useSpatialParams]) ? (p.map(j,cellGrid.gridHeight, 0, p.minFSpatial, p.maxFSpatial)) : (f));
-				cellGrid.cellMap[i][j].calcReactive(local_f, local_k, deltaT, updateIDX);
-				cellGrid.updateConcAtCell(i, j, updateIDX);
-				glMaxConc[chemU] = Math.max(glMaxConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
-				glMaxConc[chemV] = Math.max(glMaxConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
-				glMinConc[chemU] = Math.min(glMinConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
-				glMinConc[chemV] = Math.min(glMinConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
-			}// for j
-		}// for i		
-	}
+		if (p.flags[p.useSpatialParams]) {
+			//spatially varying k and f
+			for (int i = 0; i < cellGrid.gridWidth; ++i) {
+				local_k = spatialK[i];
+				for (int j = 0; j < cellGrid.gridHeight; ++j) {
+					local_f = spatialF[i];
+					cellGrid.cellMap[i][j].calcReactive(local_f, local_k, deltaT, updateIDX);
+					cellGrid.updateConcAtCell(i, j, updateIDX);
+					glMaxConc[chemU] = Math.max(glMaxConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
+					glMaxConc[chemV] = Math.max(glMaxConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
+					glMinConc[chemU] = Math.min(glMinConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
+					glMinConc[chemV] = Math.min(glMinConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
+				}// for j
+			}// for i			
+		} else {
+			//constant k and f	
+			local_k = k;
+			local_f = f;
+			for (int i = 0; i < cellGrid.gridWidth; ++i) {
+				for (int j = 0; j < cellGrid.gridHeight; ++j) {
+					cellGrid.cellMap[i][j].calcReactive(local_f, local_k, deltaT, updateIDX);
+					cellGrid.updateConcAtCell(i, j, updateIDX);
+					glMaxConc[chemU] = Math.max(glMaxConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
+					glMaxConc[chemV] = Math.max(glMaxConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
+					glMinConc[chemU] = Math.min(glMinConc[chemU],cellGrid.cellMap[i][j].conc[chemU][0]);
+					glMinConc[chemV] = Math.min(glMinConc[chemV],cellGrid.cellMap[i][j].conc[chemV][0]);
+				}// for j
+			}// for i	
+		}
+	}//updateCells
 	
 	public int getIDXFromLoc(float loc){return (int)(loc/cell2dSize);}
 	//return a 4 element array with u, v, k and f values at a particular cell location
@@ -520,8 +571,8 @@ public class myRDSolver {
 			float rClr = pixClr >> 16 & 0xFF, gClr = pixClr >> 8 & 0xFF;
 			UV = new float[]{rClr/255.0f, gClr/255.0f};
 			if(p.flags[p.useSpatialParams]){
-				local_k = ((p.flags[p.useSpatialParams]) ? (p.map(cellX, 0,shdrBuf2D.width, p.minKSpatial, p.maxKSpatial)) : (k));
-				local_f = ((p.flags[p.useSpatialParams]) ? (p.map(cellY,shdrBuf2D.height, 0, p.minFSpatial, p.maxFSpatial)) : (f));  
+				local_k = ((p.flags[p.useSpatialParams]) ? (PApplet.map(cellX, 0,shdrBuf2D.width, p.minKSpatial, p.maxKSpatial)) : (k));
+				local_f = ((p.flags[p.useSpatialParams]) ? (PApplet.map(cellY,shdrBuf2D.height, 0, p.minFSpatial, p.maxFSpatial)) : (f));  
 			}            
 			typeStr = "Pixel";
 		} else {
@@ -530,8 +581,8 @@ public class myRDSolver {
 			cellZ = 0;//p.max(0,p.min(cellGrid.gridDepth-1,getIDXFromLoc(mseLoc.z)));      //if we get 3d working, use this           
 			UV = new float[]{cellGrid.cellMap[cellX][cellY].conc[chemU][0], cellGrid.cellMap[cellX][cellY].conc[chemV][0]};
 			if(p.flags[p.useSpatialParams]){
-				local_k = ((p.flags[p.useSpatialParams]) ? (p.map(cellX, 0,cellGrid.gridWidth, p.minKSpatial, p.maxKSpatial)) : (k));
-				local_f = ((p.flags[p.useSpatialParams]) ? (p.map(cellY,cellGrid.gridHeight, 0, p.minFSpatial, p.maxFSpatial)) : (f));  
+				local_k = ((p.flags[p.useSpatialParams]) ? (PApplet.map(cellX, 0,cellGrid.gridWidth, p.minKSpatial, p.maxKSpatial)) : (k));
+				local_f = ((p.flags[p.useSpatialParams]) ? (PApplet.map(cellY,cellGrid.gridHeight, 0, p.minFSpatial, p.maxFSpatial)) : (f));  
 			}
 		}
 		String res = typeStr+" ("+ cellX + ","+cellY+") : U = " + String.format("%.5f", UV[0]) + " V = " + String.format("%.5f", UV[1]) + " k = " + String.format("%.5f", local_k) + " f = "  + String.format("%.5f", local_f);  
