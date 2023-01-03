@@ -4,7 +4,7 @@ import java.util.concurrent.ExecutorService;
 
 /**
  * Marching cubes calc implementation for Reaction Diffusion
- * @author 7strb
+ * @author John Turner
  *
  */
 public class myMarchingCubes extends base_MarchingCubes {

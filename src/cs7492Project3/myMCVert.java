@@ -2,7 +2,7 @@ package cs7492Project3;
 
 /**
  * class to store vertexes of triangle - will calculate normal based on all triangles that share this vertex
- * @author 7strb
+ * @author John Turner
  *
  */
 public class myMCVert extends myPointf{
